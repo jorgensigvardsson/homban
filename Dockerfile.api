@@ -1,0 +1,17 @@
+FROM mcr.microsoft.com/dotnet/sdk:7.0 as build
+
+COPY ./src/Sigvardsson.Homban.Api /src/
+
+RUN dotnet publish -c Release -o /build --runtime linux-musl-x64 --self-contained true /src/Sigvardsson.Homban.Api.csproj
+
+FROM mcr.microsoft.com/dotnet/aspnet:7.0-alpine-amd64
+
+WORKDIR /app
+COPY --from=build /build .
+
+VOLUME /data
+VOLUME /certs
+
+EXPOSE 80
+
+ENTRYPOINT ["./Sigvardsson.Homban.Api"]

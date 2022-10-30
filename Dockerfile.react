@@ -1,0 +1,19 @@
+FROM docker.io/library/node:18-alpine3.15 as build
+
+WORKDIR /build
+COPY ./src/frontend/src ./src/
+COPY ./src/frontend/public/ ./public/
+COPY ./src/frontend/package.json .
+COPY ./src/frontend/package-lock.json .
+COPY ./src/frontend/tsconfig.json .
+
+RUN npm ci 
+RUN npm run build
+
+FROM docker.io/library/nginx:1.23-alpine
+
+WORKDIR /app
+COPY --from=build ./build/build /usr/share/nginx/html
+COPY ./src/frontend/nginx/nginx.conf /etc/nginx/nginx.conf
+
+EXPOSE 80

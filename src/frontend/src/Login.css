@@ -1,0 +1,11 @@
+#login-form-container {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 100vw;
+	height: 100vh;
+}
+
+#login-form {
+	/*width: 200px; */
+}

@@ -1,0 +1,40 @@
+.Task {
+	color: black;
+	padding: 0.4em;
+	border-color: gray;
+	border-style: dashed;
+	border-width: 1px;
+}
+
+.Task .Title {
+	display: flex;
+	justify-content: space-between;
+}
+
+.Daily {
+	background-color: yellow;
+}
+
+.Weekly {
+	background-color: orange;
+}
+
+.BiWeekly {
+	background-color: coral;
+}
+
+.Monthly {
+	background-color: hotpink
+}
+
+.Quarterly {
+	background-color: fuchsia
+}
+
+.Yearly {
+	background-color: crimson;
+}
+
+.OneShot {
+	background-color: cadetblue;
+}

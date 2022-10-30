@@ -1,0 +1,10 @@
+#task-ops {
+	position: fixed;
+	bottom: 10px;
+}
+
+#task-edit-area {
+	position: fixed;
+	left: 230px;
+	top: 50px;
+}
