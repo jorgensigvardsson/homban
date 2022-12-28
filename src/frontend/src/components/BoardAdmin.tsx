@@ -279,7 +279,7 @@ const parseDate = (text: string) => {
 	return new Date(parseInt(match.groups!.year), parseInt(match.groups!.month) - 1, parseInt(match.groups!.day));
 }
 
-const durationRegex = /^((?<years>\d+)\s*y(ears)?)?\s*((?<quarters>\d+)\s*q(uarters)?)?\s*((?<months>\d+)\s*mo(nths)?)?\s*((?<weeks>\d+)\s*w(weeks)?)?\s*((?<days>\d+)\s*d(ays)?)?\s*((?<hours>\d+)\s*h(ours)?)?\s*((?<minutes>\d+)\s*m(inutes)?)?\s*((?<seconds>\d+)\s*s(econds)?)?\s*$/
+const durationRegex = /^((?<years>\d+)\s*y(ear(s)?)?)?\s*((?<quarters>\d+)\s*q(uarter(s)?)?)?\s*((?<months>\d+)\s*mo(nth(s)?)?)?\s*((?<weeks>\d+)\s*w(eek(s)?)?)?\s*((?<days>\d+)\s*d(ay(s)?)?)?\s*((?<hours>\d+)\s*h(our(s)?)?)?\s*((?<minutes>\d+)\s*m(inute(s)?)?)?\s*((?<seconds>\d+)\s*s(econd(s)?)?)?\s*$/
 const parseDuration = (text: string) => {
 	const match = text.match(durationRegex);
 	if (!match)
@@ -318,16 +318,25 @@ const formatDuration = (duration: moment.Duration) => {
 		if (amount > 0) {
 			if (durationString)
 				durationString += " ";
-			durationString += `${amount} ${unit}`;
+			durationString += `${amount} ${unit}${amount > 1 ? "s" : ""}`;
 		}
 	}
 
-	append(duration.years(), "years");
-	append(duration.months(), "months");
-	append(duration.days(), "days");
-	append(duration.hours(), "hours");
-	append(duration.minutes(), "minutes");
-	append(duration.seconds(), "seconds");
+	console.log("days", duration.days());
+
+	const quarters = Math.floor(duration.months() / 3);
+	const months = duration.months() % 3;
+	const weeks = Math.floor(duration.days() / 7);
+	const days = duration.days() % 7; 
+
+	append(duration.years(), "year");
+	append(quarters, "quarter");
+	append(months, "month");
+	append(weeks, "week");
+	append(days, "day");
+	append(duration.hours(), "hour");
+	append(duration.minutes(), "minute");
+	append(duration.seconds(), "second");
 
 	return durationString;
 }

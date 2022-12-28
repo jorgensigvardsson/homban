@@ -61,6 +61,8 @@ const OneTimeScheduleEditor = (props: OneTimeProps) => {
 	)
 }
 
+const PeriodHint = () => <>Units: y(ear), q(uarter), mo(nth), w(eek), d(ay). Examples: <i>3 weeks</i>, <i>3 w</i>, <i>3 week</i></>
+
 interface CalendarProps {
 	task: TaskBeingEdited;
 	errors: TaskErrors;
@@ -88,10 +90,14 @@ const PeriodicScheduleFollowingCalendarScheduleEditor = (props: CalendarProps) =
 				<Form.Label>Period after it is available again (from start)</Form.Label>
 				<Form.Control type="text"
 				              value={task.period}
+							  placeholder="E.g. 7 days"
 							  onChange={e => onScheduleChanged({...task, period: e.target.value})}
 							  isInvalid={!!errors.period}/>
+				{!errors.period && <Form.Text className="text-muted">
+					{PeriodHint()}
+				</Form.Text>}
 				<Form.Control.Feedback type="invalid">
-					{errors.period}
+					{errors.period}<br/>{PeriodHint()}
 				</Form.Control.Feedback>
 			</Form.Group>
 		</>
@@ -123,12 +129,16 @@ const PeriodicScheduleFollowingActivityEditor = (props: ActivityProps) => {
 			</Form.Group>
 			<Form.Group style={{marginTop: "1em"}}>
 				<Form.Label>Period after it is available again (from done)</Form.Label>
-				<Form.Control type="text" placeholder="Period duration"
+				<Form.Control type="text"
 				              value={task.period}
+							  placeholder="E.g. 7 days"
 							  onChange={e => onScheduleChanged({...task, period: e.target.value})}
 							  isInvalid={!!errors.period}/>
+				{!errors.period && <Form.Text className="text-muted">
+					{PeriodHint()}
+				</Form.Text>}
 				<Form.Control.Feedback type="invalid">
-					{errors.period}
+					{errors.period}<br/>{PeriodHint()}
 				</Form.Control.Feedback>
 			</Form.Group>
 		</>
