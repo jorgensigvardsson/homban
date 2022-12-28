@@ -10,7 +10,9 @@ interface Props {
 export const TaskListItem = (props: Props) => {
 	const className = props.isSelected ? "active" : "";
 
-	return <ListGroupItem className={className}
-	                      style={{ cursor: 'pointer'}}
-						  onClick={e => props.onClick(props.task)}>{props.task.title}</ListGroupItem>
+	return (
+		<ListGroupItem className={className}
+		               style={{ cursor: 'pointer'}}
+		               onClick={e => props.onClick(props.task)}>{props.task.title}</ListGroupItem>
+	)
 }

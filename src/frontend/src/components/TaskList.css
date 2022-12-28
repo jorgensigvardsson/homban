@@ -1,10 +1,8 @@
 #task-list {
-	position: fixed;
-	top: 50px;
-	bottom: 60px;
 	overflow-y: auto;
 	border-style: solid;
 	border-width: 1px;
 	border-color: lightgray;
 	border-radius: 0;
+	height: calc(100vh - 100px - 1em);
 }

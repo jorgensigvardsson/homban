@@ -6,6 +6,9 @@ import { useState } from "react"
 import moment from "moment"
 import { Api, withApi } from "../api"
 import Button from 'react-bootstrap/Button';
+import Container from "react-bootstrap/Container"
+import Row from "react-bootstrap/Row"
+import Col from "react-bootstrap/Col"
 
 interface Props {
 	board: Board;
@@ -140,26 +143,38 @@ export const BoardAdmin = (props: Props) => {
 
 	const sortedTasks = [...board.tasks].sort((a, b) => a.title.localeCompare(b.title))
 
-	return <div className="BoardAdmin">
-		<div>
-			<TaskList tasks={sortedTasks} selectedTask={selectedTask} onSelected={task => selectTask(task)} />
-			<div id="task-ops">
-				<Button variant="primary" disabled={!!(selectedTask && isDirty)} style={{marginLeft: "0.5em"}} onClick={() => newTask()}>New</Button>
-				<Button variant="secondary" disabled={!selectedTask || isDirty} style={{marginLeft: "0.5em"}} onClick={() => copyAndEditSelectedTask()}>Copy</Button>
-			</div>
-		</div>
-		<div id="task-edit-area">
-			{editedTask && <TaskEditor task={editedTask}
-									onTaskChanged={updatedTask => evaluateEditedTask(updatedTask)}
-									isDirty={isDirty}
-									errors={errors}
-									onSave={() => save()}
-									onDelete={() => deleteSelectedTask()}
-									onRevert={() => revertSelectedTask()}
-									onCancel={() => cancelNewTask()}
-									isNew={!selectedTask}/>}
-		</div>
-	</div>
+	return (
+		<Container className="BoardAdmin">
+			<Row>
+				<Col xs={12} sm={editedTask ? 4 : 12}>
+					<Container>
+						<Row>
+							<Col>
+								<TaskList tasks={sortedTasks} selectedTask={selectedTask} onSelected={task => selectTask(task)} />
+							</Col>
+						</Row>
+						<Row style={{marginTop: "0.5em"}}>
+							<Col>
+								<Button variant="primary" disabled={!!(selectedTask && isDirty)} style={{marginLeft: "0.5em"}} onClick={() => newTask()}>New</Button>
+								<Button variant="secondary" disabled={!selectedTask || isDirty} style={{marginLeft: "0.5em"}} onClick={() => copyAndEditSelectedTask()}>Copy</Button>
+							</Col>
+						</Row>
+					</Container>
+				</Col>				
+				<Col xs={editedTask ? 12 : 0} sm={editedTask ? 8 : 0}>
+					{editedTask && <TaskEditor task={editedTask}
+											onTaskChanged={updatedTask => evaluateEditedTask(updatedTask)}
+											isDirty={isDirty}
+											errors={errors}
+											onSave={() => save()}
+											onDelete={() => deleteSelectedTask()}
+											onRevert={() => revertSelectedTask()}
+											onCancel={() => cancelNewTask()}
+											isNew={!selectedTask}/>}
+				</Col>
+			</Row>
+		</Container>
+	)
 }
 
 export default withApi(BoardAdmin);
