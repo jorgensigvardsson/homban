@@ -4,7 +4,6 @@ import Card from 'react-bootstrap/Card';
 
 interface Props {
 	task: TaskModel;
-	onTaskBeginDrag: (task: TaskModel, event: React.DragEvent<HTMLElement>) => void;
 }
 
 function cardBackground(task: TaskModel) {
@@ -76,9 +75,7 @@ function cardTitle(task: TaskModel) {
 export const Task = (props: Props) => {
 	return <Card bg={cardBackground(props.task)}
 	             text={cardForeground(props.task)}
-				 style={{ margin: "0.3em" }}
-				 onDragStart={e => props.onTaskBeginDrag(props.task, e)}
-				 draggable={true}>
+				 style={{ margin: "0.3em" }}>
 		<Card.Header>{cardTitle(props.task)}</Card.Header>
 		<Card.Body>
 			<Card.Title>{props.task.title}</Card.Title>

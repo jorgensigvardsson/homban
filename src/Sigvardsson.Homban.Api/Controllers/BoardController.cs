@@ -32,13 +32,13 @@ public class BoardController : ControllerBase
         return Ok(m_dtoMapper.FromModel(await m_service.ReadBoard(cancellationToken)));
     }
     
-    [HttpPut("task/{taskId:guid}/state")]
+    [HttpPut("task/{taskId:guid}/move")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(BoardAndTask), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> SetTaskState([FromRoute] Guid taskId, [FromBody] State state, CancellationToken cancellationToken)
+    public async Task<IActionResult> MoveTask([FromRoute] Guid taskId, [FromBody] MoveData moveData, CancellationToken cancellationToken)
     {
-        return Ok(m_dtoMapper.FromModel(await m_service.SetTaskState(taskId, m_dtoMapper.ToModel(state), cancellationToken)));
+        return Ok(m_dtoMapper.FromModel(await m_service.MoveTask(taskId, m_dtoMapper.ToModel(moveData.Lane), moveData.Index, cancellationToken)));
     }
     
     [HttpPost("task")]

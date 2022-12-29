@@ -1,11 +1,11 @@
 import jwtDecode, { JwtPayload } from "jwt-decode";
 import moment, { Duration } from "moment";
 import React from "react";
-import { Board, Schedule, State, Task, BoardAndTask, TaskData } from "./models/board";
+import { Board, Schedule, Task, BoardAndTask, TaskData, TaskDictionary, Lane, IdentifiedTask } from "./models/board";
 
 export interface Api {
 	getBoard(): Promise<Board>;
-	setTaskState(taskId: string, requestedState: State): Promise<BoardAndTask>;
+	moveTask(taskId: string, lane: Lane, index: number): Promise<BoardAndTask>;
 	updateTask(taskId: string, task: TaskData): Promise<BoardAndTask>;
 	createTask(task: TaskData): Promise<BoardAndTask>;
 	deleteTask(taskId: string): Promise<Board>;
@@ -118,8 +118,8 @@ export class ApiImplementation implements Api {
 		return boardToModel(await get("board"));
 	}
 
-	async setTaskState(taskId: string, requestedState: State): Promise<BoardAndTask> {
-		return boardAndTaskToModel(await put(`board/task/${encodeURIComponent(taskId)}/state`, requestedState));
+	async moveTask(taskId: string, lane: Lane, index: number): Promise<BoardAndTask> {
+		return boardAndTaskToModel(await put(`board/task/${encodeURIComponent(taskId)}/move`, { lane: laneToDto(lane), index: index }));
 	}
 
 	async updateTask(taskId: string, task: TaskData): Promise<BoardAndTask> {
@@ -303,32 +303,39 @@ export const withApi = <Props extends object>(
 	  </ApiContext.Consumer>
 	);
 
+type TaskDictionaryDto = { [key: string]: TaskDto }
+
 interface BoardDto {
-	readonly tasks: TaskDto[]
+	readonly tasks: TaskDictionaryDto,
+	readonly readyLaneTasks: string[],
+	readonly inProgressLaneTasks: string[],
+	readonly doneLaneTasks: string[],
+	readonly inactiveLaneTasks: string[],
 }
 
 interface TaskDto {
-	readonly id: string;
 	readonly title: string,
 	readonly description: string,
-	readonly state: StateDto,
 	readonly schedule: ScheduleDto,
 	readonly lastChange: string
+}
+
+export interface IdentifiedTaskDto extends TaskDto {
+	readonly id: string;
 }
 
 interface TaskDataDto {
 	readonly title: string,
 	readonly description: string,
-	readonly state: StateDto,
 	readonly schedule: ScheduleDto,
 }
 
 interface BoardAndTaskDto {
 	readonly board: BoardDto;
-	readonly task: TaskDto;
+	readonly task: IdentifiedTaskDto;
 }
 
-enum StateDto {
+enum LaneDto {
 	Inactive = "inactive",
 	Ready = "ready",
 	InProgress = "in-progress",
@@ -355,26 +362,44 @@ interface OneTimeScheduleDto {
 type ScheduleDto = PeriodicScheduleFollowingCalendarDto | PeriodicScheduleFollowingActivityDto | OneTimeScheduleDto;
 
 function boardToModel(dto: BoardDto): Board {
+	const modelTasks: TaskDictionary = {};
+
+	for (const key in dto.tasks) {
+		modelTasks[key] = taskToModel(dto.tasks[key]);
+	}
+
 	return {
-		tasks: dto.tasks.map(taskToModel)
+		tasks: modelTasks,
+		readyLaneTasks: dto.readyLaneTasks,
+		inProgressLaneTasks: dto.inProgressLaneTasks,
+		doneLaneTasks: dto.doneLaneTasks,
+		inactiveLaneTasks: dto.inactiveLaneTasks
 	}
 }
 
 function boardAndTaskToModel(dto: BoardAndTaskDto): BoardAndTask {
 	return {
 		board: boardToModel(dto.board),
-		task: taskToModel(dto.task)
+		task: identifiedTaskToModel(dto.task)
 	}
 }
 
 function taskToModel(dto: TaskDto): Task {
 	return {
-	   id: dto.id,
-	   title: dto.title,
-	   description: dto.description,
-	   state: stateToModel(dto.state),
-	   schedule: scheduleToModel(dto.schedule),
-	   lastChange: parseDate(dto.lastChange)
+	   	title: dto.title,
+	   	description: dto.description,
+	   	schedule: scheduleToModel(dto.schedule),
+	   	lastChange: parseDate(dto.lastChange)
+	}
+}
+
+function identifiedTaskToModel(dto: IdentifiedTaskDto): IdentifiedTask {
+	return {
+		id: dto.id,
+	   	title: dto.title,
+	   	description: dto.description,
+	   	schedule: scheduleToModel(dto.schedule),
+	   	lastChange: parseDate(dto.lastChange)
 	}
 }
 
@@ -382,19 +407,13 @@ function taskUpdateToDto(model: TaskData): TaskDataDto {
 	return {
 		title: model.title,
 		description: model.description,
-		state: stateToDto(model.state),
 		schedule: scheduleToDto(model.schedule)
 	}
 }
 
-function stateToModel(dto: StateDto): State {
-	return dto as any as State;
+function laneToDto(model: Lane): LaneDto {
+	return model as any as LaneDto;
 }
-
-function stateToDto(model: State): StateDto {
-	return model as any as StateDto;
-}
-
 function scheduleToModel(dto: ScheduleDto): Schedule {
 	switch(dto.type) {
 		case "one-time":

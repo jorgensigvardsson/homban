@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
@@ -58,12 +59,16 @@ public class BoardSchedulerTests
     {
         // Arrange
         using var cts = new CancellationTokenSource();
+
+        var taskId = m_fixture.Create<Guid>();
+        var task = m_fixture.Create<Task>();
         
         var board = new Board(
-            new []
-            {
-                m_fixture.Create<Task>() with { State = State.Ready }
-            }.ToImmutableArray()
+            Tasks: new Dictionary<Guid, Task>{ [taskId] = task}.ToImmutableDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            ReadyLaneTasks: new [] { taskId }.ToImmutableArray(),
+            InProgressLaneTasks: ImmutableArray<Guid>.Empty,
+            DoneLaneTasks: ImmutableArray<Guid>.Empty, 
+            InactiveLaneTasks: ImmutableArray<Guid>.Empty 
         );
         
         m_boardService.Setup(m => m.ReadBoard(It.IsAny<CancellationToken>()))
@@ -90,10 +95,15 @@ public class BoardSchedulerTests
         var now = m_fixture.Create<DateTimeOffset>();
         var then = now + TimeSpan.FromHours(2);
         var lastChange = now - TimeSpan.FromMinutes(1);
-        var task = m_fixture.Create<Task>() with {State = State.Done, LastChange = lastChange};
+        var taskId = m_fixture.Create<Guid>();
+        var task = m_fixture.Create<IdentifiedTask>() with {LastChange = lastChange};
         var hasSlept = false; 
         var board = new Board(
-            new [] { task }.ToImmutableArray()
+            Tasks: new Dictionary<Guid, Task>{ [taskId] = task}.ToImmutableDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            ReadyLaneTasks: ImmutableArray<Guid>.Empty,
+            InProgressLaneTasks: ImmutableArray<Guid>.Empty,
+            DoneLaneTasks: new [] { taskId }.ToImmutableArray(), 
+            InactiveLaneTasks: ImmutableArray<Guid>.Empty 
         );
         
         m_boardService.Setup(m => m.ReadBoard(It.IsAny<CancellationToken>()))
@@ -106,7 +116,7 @@ public class BoardSchedulerTests
                        .Callback(() => hasSlept = true)
                        .Returns(ThreadTask.CompletedTask);
 
-        m_boardService.Setup(m => m.SetTaskState(task.Id, State.Inactive, It.IsAny<CancellationToken>()))
+        m_boardService.Setup(m => m.MoveTask(taskId, Lane.Inactive, 0, It.IsAny<CancellationToken>()))
                       .Callback(() => cts.Cancel())
                       .ReturnsAsync(new BoardAndTask(board, task));
         
@@ -116,7 +126,7 @@ public class BoardSchedulerTests
 
         // Assert
         m_threadControl.Verify(m => m.Delay(TimeSpan.FromHours(2) - TimeSpan.FromMinutes(1), It.IsAny<CancellationToken>()));
-        m_boardService.Verify(m => m.SetTaskState(task.Id, State.Inactive, It.IsAny<CancellationToken>()));
+        m_boardService.Verify(m => m.MoveTask(taskId, Lane.Inactive, 0, It.IsAny<CancellationToken>()));
     }
     
     [Fact]
@@ -128,9 +138,14 @@ public class BoardSchedulerTests
         var now = m_fixture.Create<DateTimeOffset>();
         var then = now + TimeSpan.FromMinutes(1);
         var callCount = 0;
-        var task = m_fixture.Create<Task>() with {State = State.Inactive};
+        var taskId = m_fixture.Create<Guid>();
+        var task = m_fixture.Create<IdentifiedTask>();
         var board = new Board(
-            new [] { task }.ToImmutableArray()
+            Tasks: new Dictionary<Guid, Task>{ [taskId] = task}.ToImmutableDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            ReadyLaneTasks: ImmutableArray<Guid>.Empty,
+            InProgressLaneTasks: ImmutableArray<Guid>.Empty,
+            DoneLaneTasks: ImmutableArray<Guid>.Empty,  
+            InactiveLaneTasks: new [] { taskId }.ToImmutableArray() 
         );
         
         m_boardService.Setup(m => m.ReadBoard(It.IsAny<CancellationToken>()))
@@ -145,7 +160,7 @@ public class BoardSchedulerTests
         m_threadControl.Setup(m => m.Delay(then - now, It.IsAny<CancellationToken>()))
                        .Returns(ThreadTask.CompletedTask);
 
-        m_boardService.Setup(m => m.SetTaskState(task.Id, State.Ready, It.IsAny<CancellationToken>()))
+        m_boardService.Setup(m => m.MoveTask(taskId, Lane.Ready, 0, It.IsAny<CancellationToken>()))
                       .Callback(() => cts.Cancel())
                       .ReturnsAsync(new BoardAndTask(board, task));
         
@@ -155,7 +170,7 @@ public class BoardSchedulerTests
 
         // Assert
         m_threadControl.Verify(m => m.Delay(then - now, It.IsAny<CancellationToken>()));
-        m_boardService.Verify(m => m.SetTaskState(task.Id, State.Ready, It.IsAny<CancellationToken>()));
+        m_boardService.Verify(m => m.MoveTask(taskId, Lane.Ready, 0, It.IsAny<CancellationToken>()));
     }
     
     [Fact]
@@ -166,10 +181,21 @@ public class BoardSchedulerTests
         var readCount = 0;
         var now = m_fixture.Create<DateTimeOffset>();
         var then = now + TimeSpan.FromMinutes(1);
-        var task = m_fixture.Create<Task>() with {State = State.Inactive};
-        var emptyBoard = new Board(ImmutableArray<Task>.Empty);
+        var taskId = m_fixture.Create<Guid>();
+        var task = m_fixture.Create<IdentifiedTask>();
+        var emptyBoard = new Board(
+            Tasks: ImmutableDictionary<Guid, Task>.Empty, 
+            ReadyLaneTasks: ImmutableArray<Guid>.Empty,
+            InProgressLaneTasks: ImmutableArray<Guid>.Empty,
+            DoneLaneTasks: ImmutableArray<Guid>.Empty,
+            InactiveLaneTasks:  ImmutableArray<Guid>.Empty 
+        );
         var board = new Board(
-            new [] { task }.ToImmutableArray()
+            Tasks: new Dictionary<Guid, Task>{ [taskId] = task}.ToImmutableDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            ReadyLaneTasks: ImmutableArray<Guid>.Empty,
+            InProgressLaneTasks: ImmutableArray<Guid>.Empty,
+            DoneLaneTasks: ImmutableArray<Guid>.Empty,  
+            InactiveLaneTasks: new [] { taskId }.ToImmutableArray() 
         );
         var callCount = 0;
         var infiniteDelayOrder = 0;
@@ -205,7 +231,7 @@ public class BoardSchedulerTests
                        .Callback(() => inactiveTaskDelayOrder = ++callCount)
                        .Returns(ThreadTask.CompletedTask);
 
-        m_boardService.Setup(m => m.SetTaskState(task.Id, State.Ready, It.IsAny<CancellationToken>()))
+        m_boardService.Setup(m => m.MoveTask(taskId, Lane.Ready, 0, It.IsAny<CancellationToken>()))
                       .Callback(() =>
                        {
                            readyStateSet.SetResult();
@@ -223,6 +249,6 @@ public class BoardSchedulerTests
         
         // Assert
         infiniteDelayOrder.ShouldBeLessThan(inactiveTaskDelayOrder);
-        m_boardService.Verify(m => m.SetTaskState(task.Id, State.Ready, It.IsAny<CancellationToken>()));
+        m_boardService.Verify(m => m.MoveTask(taskId, Lane.Ready, 0, It.IsAny<CancellationToken>()));
     }
 }

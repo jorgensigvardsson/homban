@@ -58,7 +58,7 @@ public class LoginController : Controller
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     [HttpPost("renew-token")]
     [Produces("application/json")]
-    public async Task<IActionResult> RenewToken()
+    public IActionResult RenewToken()
     {
         if (m_httpContextAccessor.HttpContext == null)
             throw new InvalidOperationException("No HttpContext!");

@@ -1,4 +1,4 @@
-import { Board, OneTimeSchedule, State, Task } from "../models/board"
+import { Board, IdentifiedTask, OneTimeSchedule, Task } from "../models/board"
 import { TaskEditor } from "./TaskEditor"
 import './BoardAdmin.css'
 import { TaskList } from "./TaskList"
@@ -38,11 +38,11 @@ export const BoardAdmin = (props: Props) => {
 	const { board, api, onBoardUpdated } = props;
 
 	const [editedTask, setEditedTask] = useState<TaskBeingEdited | null>(null);
-	const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+	const [selectedTask, setSelectedTask] = useState<IdentifiedTask | null>(null);
 	const [isDirty, setIsDirty] = useState<boolean>(false);
 	const [errors, setErrors] = useState<TaskErrors>({});
 
-	const selectTask = async (task: Task) => {
+	const selectTask = async (task: IdentifiedTask) => {
 		if (selectedTask || editedTask) {
 			if (selectedTask && selectedTask.id === task.id)
 				return;
@@ -106,8 +106,8 @@ export const BoardAdmin = (props: Props) => {
 
 		try {
 			const boardAndTask = selectedTask 
-				? await api.updateTask(selectedTask.id, makeTaskData(editedTask, selectedTask.state))
-				: await api.createTask(makeTaskData(editedTask, State.Ready));
+				? await api.updateTask(selectedTask.id, makeTaskData(editedTask))
+				: await api.createTask(makeTaskData(editedTask));
 
 			onBoardUpdated(boardAndTask.board);
 			setSelectedTask(boardAndTask.task)
@@ -144,7 +144,7 @@ export const BoardAdmin = (props: Props) => {
 		setEditedTask(null);
 	}
 
-	const sortedTasks = [...board.tasks].sort((a, b) => a.title.localeCompare(b.title))
+	const sortedTasks = [...Object.entries(board.tasks)].map(kvp => ({id: kvp[0], ...kvp[1]})).sort((a, b) => a.title.localeCompare(b.title))
 
 	return (
 		<Container className="BoardAdmin">
@@ -215,11 +215,10 @@ const isValidDuration = (duration: string | undefined) => {
 	return duration !== undefined && parseDuration(duration) !== null;
 }
 
-const makeTaskData = (edited: TaskBeingEdited, state: State) => {
+const makeTaskData = (edited: TaskBeingEdited) => {
 	return {
 		title: edited.title,
 		description: edited.description,
-		state: state,
 		schedule: makeSchedule(edited)
 	}
 }

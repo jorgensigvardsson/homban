@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import './App.css';
 import { Board } from './components/Board';
 import BoardAdmin from './components/BoardAdmin';
-import { getTask, setTaskState } from './logic/board-algorithms';
-import { Board as BoardModel, State, Task } from './models/board';
+import { Board as BoardModel, Lane, Task } from './models/board';
 import Tabs from 'react-bootstrap/Tabs';
 import Tab from 'react-bootstrap/Tab';
 import { Api, WebSocketMessage, withApi } from './api';
@@ -30,29 +29,27 @@ const App = (props: Props) => {
 		fetchData();
 		api.connectWebSocket(async (message: WebSocketMessage) => {
 			if (message.type === "board") {
-				setBoard(p => message.board);
+				setBoard(() => message.board);
 			}
 		});
-
 	}, [api]);
 
 
-	const onTaskBeginDrag = (board: BoardModel, task: Task, event: React.DragEvent<HTMLElement>) => {
-		event.dataTransfer.setData("task", task.id);
-	}
-
-	const onTaskDrop = async (board: BoardModel, requestedState: State, event: React.DragEvent<HTMLElement>) => {
-		event.preventDefault();
-
-		const taskId = event.dataTransfer.getData("task");
-		const task = getTask(board, taskId);
-
-		// Update the local state
-		setBoard(setTaskState(board, task, requestedState));
-
+	const onTaskDrop = async (board: BoardModel, taskId: string, task: Task, lane: Lane, index: number) => {
 		try {
+			// Update the local state
+			try {
+				const newBoard = moveTask(board, taskId, lane, index);
+				if (!newBoard)
+					return;
+
+				setBoard(newBoard);
+			} catch(error) {
+				console.error("Failed to move task in internal state. ", error);
+			}
+
 			// And let's call into the server and do it too (state will be reversed if it didn't work)
-			await api.setTaskState(task.id, requestedState);
+			await api.moveTask(taskId, lane, index);
 		} catch (err: any) {
 			alert(err.message);
 		}
@@ -62,9 +59,7 @@ const App = (props: Props) => {
 		<>
 			{board && <Tabs>
 				<Tab eventKey="board" title="Board">
-					<Board board={board}
-						onTaskBeginDrag={(task, event) => onTaskBeginDrag(board, task, event)}
-						onTaskDrop={(requestedState, event) => onTaskDrop(board, requestedState, event)}/>
+					<Board board={board} onTaskDrop={onTaskDrop}/>
 				</Tab>
 
 				<Tab eventKey="admin" title="Admin">
@@ -77,3 +72,63 @@ const App = (props: Props) => {
 }
 
 export default withApi(App);
+
+function findLaneAndIndex(board: BoardModel, taskId: string): [lane: Lane, index: number] {
+	let index = board.readyLaneTasks.indexOf(taskId);
+	if (index >= 0)
+		return [Lane.Ready, index];
+
+	index = board.inProgressLaneTasks.indexOf(taskId);
+	if (index >= 0)
+		return [Lane.InProgress, index];
+	
+	index = board.doneLaneTasks.indexOf(taskId);
+	if (index >= 0)
+		return [Lane.Done, index];
+
+	index = board.inactiveLaneTasks.indexOf(taskId);
+	if (index >= 0)
+		return [Lane.Inactive, index];
+
+	throw Error(`Unknown task ${taskId}`);
+}
+
+function removeTask(laneTasks: string[], index: number): string[] {
+	return [...laneTasks.slice(0, index), ...laneTasks.slice(index + 1)];
+}
+
+function insertTask(laneTasks: string[], index: number, taskId: string): string[] {
+	return [...laneTasks.slice(0, index), taskId, ...laneTasks.slice(index)];
+}
+
+function moveTaskInLane(laneTasks: string[], taskId: string, prevIndex: number | null, index: number | null): string[] {
+	if (prevIndex === null && index !== null)
+		return insertTask(laneTasks, index, taskId);
+	
+	if (prevIndex !== null && index === null)
+		return removeTask(laneTasks, prevIndex);
+
+	if (prevIndex !== null && index !== null)
+		return insertTask(removeTask(laneTasks, prevIndex), index, taskId);
+
+	return laneTasks;
+}
+
+function moveTask(board: BoardModel, taskId: string, lane: Lane, index: number): BoardModel | null {
+	const [prevLane, prevIndex] = findLaneAndIndex(board, taskId);
+
+	// Don't mess about with the inactive lane (it's a server only lane)
+	if (lane === Lane.Inactive || prevLane === Lane.Inactive)
+		return null;
+
+	// If no change, then do nothing
+	if (prevLane === lane && prevIndex === index)
+		return null;
+	
+	return {
+		...board,
+		readyLaneTasks: moveTaskInLane(board.readyLaneTasks, taskId, prevLane === Lane.Ready ? prevIndex : null, lane === Lane.Ready ? index : null),
+		inProgressLaneTasks: moveTaskInLane(board.inProgressLaneTasks, taskId, prevLane === Lane.InProgress ? prevIndex : null, lane === Lane.InProgress ? index : null),
+		doneLaneTasks: moveTaskInLane(board.doneLaneTasks, taskId, prevLane === Lane.Done ? prevIndex : null, lane === Lane.Done ? index : null)
+	}
+}

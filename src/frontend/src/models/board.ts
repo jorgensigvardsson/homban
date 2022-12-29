@@ -1,14 +1,29 @@
 import { Duration } from 'moment';
 
+export type TaskDictionary = { [key: string]: Task }
+
 export interface Board {
-	readonly tasks: Task[]
+	readonly tasks: TaskDictionary,
+	readonly readyLaneTasks: string[],
+	readonly inProgressLaneTasks: string[],
+	readonly doneLaneTasks: string[],
+	readonly inactiveLaneTasks: string[],
+}
+
+export enum Lane {
+	Inactive = "inactive",
+	Ready = "ready",
+	InProgress = "in-progress",
+	Done = "done"
+}
+
+export interface IdentifiedTask extends Task {
+	readonly id: string;
 }
 
 export interface Task {
-	readonly id: string;
 	readonly title: string,
 	readonly description: string,
-	readonly state: State,
 	readonly schedule: Schedule,
 	readonly lastChange: Date
 }
@@ -16,20 +31,12 @@ export interface Task {
 export interface TaskData {
 	readonly title: string,
 	readonly description: string,
-	readonly state: State,
 	readonly schedule: Schedule,
 }
 
 export interface BoardAndTask {
 	readonly board: Board;
-	readonly task: Task;
-}
-
-export enum State {
-	Inactive = "inactive",
-	Ready = "ready",
-	InProgress = "in-progress",
-	Done = "done"
+	readonly task: IdentifiedTask;
 }
 
 export interface PeriodicScheduleFollowingCalendar {

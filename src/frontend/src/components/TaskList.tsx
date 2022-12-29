@@ -1,12 +1,12 @@
-import { Task } from "../models/board";
+import { IdentifiedTask } from "../models/board";
 import ListGroup from 'react-bootstrap/ListGroup';
 import { TaskListItem } from "./TaskListItem";
 import "./TaskList.css";
 
 interface Props {
-	tasks: Task[]
-	selectedTask: Task | null;
-	onSelected: (task: Task) => void;
+	tasks: IdentifiedTask[]
+	selectedTask: IdentifiedTask | null;
+	onSelected: (task: IdentifiedTask) => void;
 }
 
 export const TaskList = (props: Props) => {

@@ -22,7 +22,7 @@ const render = () => {
 		domNode = <div className="status-text"><h1>Validating authentication...</h1></div>
 	} else if(isAuthenticated === false) {
 		domNode = (
-			<React.StrictMode>
+			// <React.StrictMode>
 				<ApiContext.Provider value={api}>
 					<Login onLoggedIn={() => {
 						isAuthenticated = true;
@@ -30,15 +30,15 @@ const render = () => {
 						render();
 					}}/>
 				</ApiContext.Provider>
-			</React.StrictMode>
+			// </React.StrictMode>
 		)
 	} else {
 		domNode = (
-			<React.StrictMode>
+			// <React.StrictMode>
 				<ApiContext.Provider value={api}>
 					<App />
 				</ApiContext.Provider>
-			</React.StrictMode>
+			// </React.StrictMode>
 		);
 	}
 	root.render(domNode);

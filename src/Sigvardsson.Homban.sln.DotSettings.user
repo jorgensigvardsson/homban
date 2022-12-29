@@ -1,15 +1,5 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
 	
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=55a737f8_002D7f58_002D49dc_002D989a_002Df9654116f7ab/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="OneTimeSchedule_OneTimeSchedule_HasNeverBeenMovedOffTheBoard" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
-  &lt;TestAncestor&gt;
-    &lt;TestId&gt;xUnit::8734EF03-D08B-4075-85D8-3685DD77FE02::net7.0::Sigvardsson.Homban.Api.UnitTests.TestClasses.InactiveTaskSchedulerTests.OneTimeSchedule_OneTimeSchedule_HasNeverBeenMovedOffTheBoard&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::8734EF03-D08B-4075-85D8-3685DD77FE02::net7.0::Sigvardsson.Homban.Api.UnitTests.TestClasses.InactiveTaskSchedulerTests.OneTimeSchedule_OneTimeSchedule_HasBeenMovedOffTheBoard&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::8734EF03-D08B-4075-85D8-3685DD77FE02::net7.0::Sigvardsson.Homban.Api.UnitTests.TestClasses.InactiveTaskSchedulerTests.OneTimeSchedule_PeriodicScheduleFollowingActivity_HasBeenMovedOffTheBoard&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::8734EF03-D08B-4075-85D8-3685DD77FE02::net7.0::Sigvardsson.Homban.Api.UnitTests.TestClasses.InactiveTaskSchedulerTests.OneTimeSchedule_PeriodicScheduleFollowingActivity_HasNotBeenMovedOffTheBoard&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::8734EF03-D08B-4075-85D8-3685DD77FE02::net7.0::Sigvardsson.Homban.Api.UnitTests.TestClasses.InactiveTaskSchedulerTests.OneTimeSchedule_PeriodicScheduleFollowingCalendar&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::8734EF03-D08B-4075-85D8-3685DD77FE02::net7.0::Sigvardsson.Homban.Api.UnitTests.TestClasses.BoardSchedulerTests.ServiceWaitsForTheNextTaskToBeScheduled_NoDoneOrInactiveTasks_WaitsForever&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::8734EF03-D08B-4075-85D8-3685DD77FE02::net7.0::Sigvardsson.Homban.Api.UnitTests.TestClasses.BoardSchedulerTests.ServiceWaitsForTheNextTaskToBeScheduled_DoneTaskIsMovedToInactiveAfterTimeBasedOnLastChange_WaitsForever&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::8734EF03-D08B-4075-85D8-3685DD77FE02::net7.0::Sigvardsson.Homban.Api.UnitTests.TestClasses.BoardSchedulerTests.ServiceWaitsForTheNextTaskToBeScheduled_InactiveTaskIsMovedToReadyAfterCalculatedTime&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::8734EF03-D08B-4075-85D8-3685DD77FE02::net7.0::Sigvardsson.Homban.Api.UnitTests.TestClasses.BoardSchedulerTests&lt;/TestId&gt;
-  &lt;/TestAncestor&gt;
+  &lt;Project Location="/home/jorsi/Projects/homban/src/Sigvardsson.Homban.Api.UnitTests" Presentation="&amp;lt;Sigvardsson.Homban.Api.UnitTests&amp;gt;" /&gt;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>

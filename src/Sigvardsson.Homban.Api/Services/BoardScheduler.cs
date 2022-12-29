@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -81,31 +80,34 @@ public class BoardScheduler : BackgroundService
     private async ThreadTask UpdateBoard(Board board, DateTimeOffset now, CancellationToken cancellationToken)
     {
         // Tasks that have been in the state "done" long enough are moved to inactive state
-        foreach (var task in board.Tasks.Where(t => t.State is State.Done && t.LastChange + s_durationInDoneColumn <= now))
+        foreach (var taskId in board.DoneLaneTasks)
         {
-            await m_boardService.SetTaskState(task.Id, State.Inactive, cancellationToken);
+            if (board.Tasks[taskId].LastChange + s_durationInDoneColumn <= now)
+                await m_boardService.MoveTask(taskId, Lane.Inactive, 0, cancellationToken);
         }
         
-        foreach (var task in board.Tasks.Where(t => t.State is State.Inactive))
+        foreach (var taskId in board.InactiveLaneTasks)
         {
-            var taskNextTime = m_inactiveTaskScheduler.ScheduleReady(task, now);
+            var taskNextTime = m_inactiveTaskScheduler.ScheduleReady(board.Tasks[taskId], now);
             if (taskNextTime <= now)
-                await m_boardService.SetTaskState(task.Id, State.Ready, cancellationToken);
+                await m_boardService.MoveTask(taskId, Lane.Ready, 0, cancellationToken);
         }
     }
 
     private TimeSpan CalculateSleep(Board board, DateTimeOffset now)
     {
         DateTimeOffset? nextTime = null;
-
-        foreach (var task in board.Tasks.Where(t => t.State is State.Done))
+        
+        foreach (var taskId in board.DoneLaneTasks)
         {
+            var task = board.Tasks[taskId];
             if (nextTime == null || task.LastChange + s_durationInDoneColumn < nextTime)
                 nextTime = task.LastChange + s_durationInDoneColumn;
         }
-
-        foreach (var task in board.Tasks.Where(t => t.State is State.Inactive))
+        
+        foreach (var taskId in board.InactiveLaneTasks)
         {
+            var task = board.Tasks[taskId];
             var taskNextTime = m_inactiveTaskScheduler.ScheduleReady(task, now);
             if (nextTime == null || taskNextTime < nextTime)
                 nextTime = taskNextTime;

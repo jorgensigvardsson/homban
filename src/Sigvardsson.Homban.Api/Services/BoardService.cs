@@ -1,17 +1,24 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace Sigvardsson.Homban.Api.Services;
 
+public enum Lane
+{
+    Inactive,
+    Ready,
+    InProgress,
+    Done
+} 
+
 public interface IBoardService
 {
     Task<Board> ReadBoard(CancellationToken cancellationToken);
-    Task<BoardAndTask> SetTaskState(Guid taskId, State newState, CancellationToken cancellationToken);
+    Task<BoardAndTask> MoveTask(Guid taskId, Lane lane, int index, CancellationToken cancellationToken);
     Task<BoardAndTask> CreateTask(TaskData taskData, CancellationToken cancellationToken);
     Task<BoardAndTask> UpdateTask(Guid taskId, TaskData taskData, CancellationToken cancellationToken);
     Task<Board> DeleteTask(Guid taskId, CancellationToken cancellationToken);
@@ -58,7 +65,11 @@ public class BoardService : IBoardService, IDisposable
         return m_mutex.Locked(async () =>
         {
             var boardAndTask = editor(m_board ?? await m_backingStoreService.Get(cancellationToken));
-            await m_backingStoreService.Set(m_board = boardAndTask.Board, cancellationToken);
+            if (ReferenceEquals(boardAndTask.Board, m_board))
+                return boardAndTask;
+            
+            await m_backingStoreService.Set(boardAndTask.Board, cancellationToken);
+            m_board = boardAndTask.Board;
             await FireObservers(m_board);
             return boardAndTask;
         }, cancellationToken);
@@ -68,39 +79,42 @@ public class BoardService : IBoardService, IDisposable
     {
         return m_mutex.Locked(async () =>
         {
-            await m_backingStoreService.Set(m_board = editor(m_board ?? await m_backingStoreService.Get(cancellationToken)), cancellationToken);
+            var newBoard = editor(m_board ?? await m_backingStoreService.Get(cancellationToken));
+            if (ReferenceEquals(newBoard, m_board))
+                return m_board;
+                
+            await m_backingStoreService.Set(newBoard, cancellationToken);
+            m_board = newBoard;
             await FireObservers(m_board);
             return m_board;
         }, cancellationToken);
     }
 
-    private Task NewTask(Guid taskId, TaskData taskData)
+    private IdentifiedTask NewTask(Guid id, TaskData taskData)
     {
-        return new Task(
-            Id: taskId,
+        return new IdentifiedTask(
+            Id: id,
             Title: taskData.Title,
             Description: taskData.Description,
-            State: taskData.State,
             Schedule: taskData.Schedule,
             Created: m_clock.Now,
             LastChange: m_clock.Now,
             LastMovedOnToBoardTime: m_clock.Now,
-            LastMovedOffTheBoardTime: taskData.State == State.Inactive ? m_clock.Now : null
+            LastMovedOffTheBoardTime: null
         );
     }
     
-    private Task UpdateTask(Task oldTask, TaskData taskData)
+    private IdentifiedTask UpdateTask(Guid id, Task oldTask, TaskData taskData)
     {
-        return new Task(
-            Id: oldTask.Id,
+        return new IdentifiedTask(
+            Id: id,
             Title: taskData.Title,
             Description: taskData.Description,
-            State: taskData.State,
             Schedule: taskData.Schedule,
             Created: oldTask.Created,
             LastChange: m_clock.Now,
-            LastMovedOnToBoardTime: taskData.State == State.Ready ? m_clock.Now : oldTask.LastMovedOnToBoardTime,
-            LastMovedOffTheBoardTime: taskData.State == State.Inactive ? m_clock.Now : oldTask.LastMovedOffTheBoardTime
+            LastMovedOnToBoardTime: oldTask.LastMovedOnToBoardTime,
+            LastMovedOffTheBoardTime: oldTask.LastMovedOffTheBoardTime
         );
     }
 
@@ -108,13 +122,14 @@ public class BoardService : IBoardService, IDisposable
     {
         return EditBoard(board =>
         {
-            var newTask = NewTask(m_guidGenerator.NewGuid(), taskData);
-            
+            var taskId = m_guidGenerator.NewGuid();
+            var newTask = NewTask(taskId, taskData);
+
             return new BoardAndTask(board with
             {
-                Tasks = board.Tasks
-                             .Append(newTask)
-                             .ToImmutableArray()
+                Tasks = board.Tasks.Add(newTask.Id, newTask),
+                ReadyLaneTasks = board.ReadyLaneTasks.Add(newTask.Id),
+                InactiveLaneTasks = board.InactiveLaneTasks
             }, newTask);
         }, cancellationToken);
     }
@@ -123,60 +138,103 @@ public class BoardService : IBoardService, IDisposable
     {
         return EditBoard(board =>
         {
-            var task = board.Tasks.SingleOrDefault(t => t.Id == taskId);
-            if (task == null)
+            if (!board.Tasks.TryGetValue(taskId, out var task))
                 throw new ArgumentException("Unknown task ID", nameof(taskId));
 
-            var newTask = UpdateTask(task, taskData);
+            var newTask = UpdateTask(taskId, task, taskData);
             return new BoardAndTask(board with
             {
-                Tasks = board.Tasks
-                             .Remove(task)
-                             .Append(newTask)
-                             .ToImmutableArray()
+                Tasks = board.Tasks.SetItem(taskId, newTask)
             }, newTask);
         }, cancellationToken);
     }
 
     public Task<Board> DeleteTask(Guid taskId, CancellationToken cancellationToken)
     {
-        return EditBoard(board =>
+        return EditBoard(board => board with
         {
-            var task = board.Tasks.SingleOrDefault(t => t.Id == taskId);
-            if (task == null)
-                return board;
-
-            return board with
-            {
-                Tasks = board.Tasks
-                             .Remove(task)
-                             .ToImmutableArray()
-            };
+            Tasks = board.Tasks.Remove(taskId)
         }, cancellationToken);
     }
 
-    public Task<BoardAndTask> SetTaskState(Guid taskId, State newState, CancellationToken cancellationToken)
+    private (Lane lane, int index) FindLaneAndIndex(Board board, Guid taskId)
+    {
+        var index = board.ReadyLaneTasks.IndexOf(taskId);
+        if (index >= 0)
+            return (Lane.Ready, index);
+
+        index = board.InProgressLaneTasks.IndexOf(taskId);
+        if (index >= 0)
+            return (Lane.InProgress, index);
+        
+        index = board.DoneLaneTasks.IndexOf(taskId);
+        if (index >= 0)
+            return (Lane.Done, index);
+        
+        index = board.InactiveLaneTasks.IndexOf(taskId);
+        if (index >= 0)
+            return (Lane.Inactive, index);
+
+        throw new ArgumentException($"Unknown task ID {taskId}", nameof(taskId));
+    }
+
+    private ImmutableArray<Guid> MoveTaskInLane(ImmutableArray<Guid> laneTasks, Guid taskId, int? prevIndex, int? index)
+    {
+        if (index == null && prevIndex == null)
+            return laneTasks;
+        
+        if (prevIndex == null && index != null)
+            return laneTasks.Insert(index.Value, taskId);
+        
+        if (prevIndex != null && index == null)
+            return laneTasks.RemoveAt(prevIndex.Value);
+        
+        if (prevIndex!.Value != index!.Value)
+            return laneTasks.RemoveAt(prevIndex.Value).Insert(index.Value, taskId);
+
+        return laneTasks;
+    }
+
+    public Task<BoardAndTask> MoveTask(Guid taskId, Lane lane, int index, CancellationToken cancellationToken)
     {
         return EditBoard(board =>
         {
-            var task = board.Tasks.SingleOrDefault(t => t.Id == taskId);
-            if (task == null)
+            if (!board.Tasks.TryGetValue(taskId, out var task))
                 throw new ArgumentException("Unknown task ID", nameof(taskId));
 
-            var newTask = task with
+            var identifiedTask = new IdentifiedTask(
+                Id: taskId,
+                Title: task.Title,
+                Description: task.Description,
+                Schedule: task.Schedule,
+                Created: task.Created,
+                LastChange: task.LastChange,
+                LastMovedOnToBoardTime: task.LastMovedOnToBoardTime,
+                LastMovedOffTheBoardTime: task.LastMovedOffTheBoardTime
+            );
+
+            var (prevLane, prevIndex) = FindLaneAndIndex(board, taskId);
+            if (prevLane == lane && prevIndex == index)
+                return new BoardAndTask(board, identifiedTask);
+
+            var newTask = identifiedTask with
             {
-                State = newState,
                 LastChange = m_clock.Now,
-                LastMovedOnToBoardTime = newState == State.Ready ? m_clock.Now : task.LastMovedOnToBoardTime,
-                LastMovedOffTheBoardTime = newState == State.Inactive ? m_clock.Now : task.LastMovedOnToBoardTime,
+                LastMovedOnToBoardTime = prevLane != Lane.Ready && lane == Lane.Ready ? m_clock.Now : task.LastMovedOnToBoardTime,
+                LastMovedOffTheBoardTime = prevLane != Lane.Inactive && lane == Lane.Inactive ? m_clock.Now : task.LastMovedOnToBoardTime,
             };
+
+            var readyLaneTasks = MoveTaskInLane(board.ReadyLaneTasks, taskId, prevLane == Lane.Ready ? prevIndex : null, lane == Lane.Ready ? index : null);
+            var inProgressLaneTasks = MoveTaskInLane(board.InProgressLaneTasks, taskId, prevLane == Lane.InProgress ? prevIndex : null, lane == Lane.InProgress ? index : null);
+            var doneLaneTasks = MoveTaskInLane(board.DoneLaneTasks, taskId, prevLane == Lane.Done ? prevIndex : null, lane == Lane.Done ? index : null);
+            var inactiveLaneTasks = MoveTaskInLane(board.InactiveLaneTasks, taskId, prevLane == Lane.Inactive ? prevIndex : null, lane == Lane.Inactive ? index : null);
 
             return new BoardAndTask(board with
             {
-                Tasks = board.Tasks
-                             .Remove(task)
-                             .Append(newTask)
-                             .ToImmutableArray()
+                ReadyLaneTasks = readyLaneTasks,
+                InProgressLaneTasks = inProgressLaneTasks,
+                DoneLaneTasks = doneLaneTasks,
+                InactiveLaneTasks = inactiveLaneTasks
             }, newTask);
         }, cancellationToken);
     }
