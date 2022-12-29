@@ -325,8 +325,6 @@ const formatDuration = (duration: moment.Duration) => {
 		}
 	}
 
-	console.log("days", duration.days());
-
 	const quarters = Math.floor(duration.months() / 3);
 	const months = duration.months() % 3;
 	const weeks = Math.floor(duration.days() / 7);

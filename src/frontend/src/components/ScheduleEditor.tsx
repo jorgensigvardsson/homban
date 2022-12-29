@@ -50,7 +50,7 @@ const OneTimeScheduleEditor = (props: OneTimeProps) => {
 			<Form.Label>When it is available</Form.Label>
 			<Form.Control 
 				type="date"
-				value={task.when}
+				value={task.when ?? ""}
 				onChange={e => onScheduleChanged({...task, when: e.target.value})}
 				isInvalid={!!errors.when}
 			/>
@@ -78,7 +78,7 @@ const PeriodicScheduleFollowingCalendarScheduleEditor = (props: CalendarProps) =
 				<Form.Label>When it is available</Form.Label>
 				<Form.Control 
 					type="date"
-					value={task.start}
+					value={task.start ?? ""}
 					onChange={e => onScheduleChanged({...task, start: e.target.value})}
 					isInvalid={!!errors.start}
 				/>
@@ -89,7 +89,7 @@ const PeriodicScheduleFollowingCalendarScheduleEditor = (props: CalendarProps) =
 			<Form.Group style={{marginTop: "1em"}}>
 				<Form.Label>Period after it is available again (from start)</Form.Label>
 				<Form.Control type="text"
-				              value={task.period}
+				              value={task.period ?? ""}
 							  placeholder="E.g. 7 days"
 							  onChange={e => onScheduleChanged({...task, period: e.target.value})}
 							  isInvalid={!!errors.period}/>
@@ -119,7 +119,7 @@ const PeriodicScheduleFollowingActivityEditor = (props: ActivityProps) => {
 				<Form.Label>When it is available</Form.Label>
 				<Form.Control 
 					type="date"
-					value={task.start}
+					value={task.start ?? ""}
 					onChange={e => onScheduleChanged({...task, start: e.target.value})}
 					isInvalid={!!errors.start}
 					/>
@@ -130,7 +130,7 @@ const PeriodicScheduleFollowingActivityEditor = (props: ActivityProps) => {
 			<Form.Group style={{marginTop: "1em"}}>
 				<Form.Label>Period after it is available again (from done)</Form.Label>
 				<Form.Control type="text"
-				              value={task.period}
+				              value={task.period ?? ""}
 							  placeholder="E.g. 7 days"
 							  onChange={e => onScheduleChanged({...task, period: e.target.value})}
 							  isInvalid={!!errors.period}/>
