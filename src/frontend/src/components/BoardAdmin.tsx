@@ -110,7 +110,10 @@ export const BoardAdmin = (props: Props) => {
 				: await api.createTask(makeTaskData(editedTask, State.Ready));
 
 			onBoardUpdated(boardAndTask.board);
-			selectTask(boardAndTask.task)
+			setSelectedTask(boardAndTask.task)
+			setEditedTask(makeEditable(boardAndTask.task));
+			setIsDirty(false);
+			setErrors({});
 		} catch (error: any) {
 			alert(`An error occurred: ${error.message}`)
 		}
