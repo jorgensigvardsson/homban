@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import Form from 'react-bootstrap/Form';
 import { TaskBeingEdited, TaskErrors } from "./BoardAdmin";
 
@@ -45,14 +46,18 @@ interface OneTimeProps {
 const OneTimeScheduleEditor = (props: OneTimeProps) => {
 	const { task, errors, onScheduleChanged } = props;
 
+	const datePickerRef = useRef<HTMLInputElement>(null);
+
 	return (
 		<Form.Group style={{marginTop: "1em"}}>
 			<Form.Label>When it is available</Form.Label>
 			<Form.Control 
-				type="date"
+				type="date" 
 				value={task.when ?? ""}
 				onChange={e => onScheduleChanged({...task, when: e.target.value})}
 				isInvalid={!!errors.when}
+				ref={datePickerRef}
+				onFocus={e => { if (e.isTrusted) datePickerRef.current?.showPicker()} }
 			/>
 			<Form.Control.Feedback type="invalid">
 				{errors.when}
@@ -72,6 +77,8 @@ interface CalendarProps {
 const PeriodicScheduleFollowingCalendarScheduleEditor = (props: CalendarProps) => {
 	const { task, errors, onScheduleChanged } = props;
 
+	const datePickerRef = useRef<HTMLInputElement>(null);
+
 	return (
 		<>
 			<Form.Group style={{marginTop: "1em"}}>
@@ -81,6 +88,8 @@ const PeriodicScheduleFollowingCalendarScheduleEditor = (props: CalendarProps) =
 					value={task.start ?? ""}
 					onChange={e => onScheduleChanged({...task, start: e.target.value})}
 					isInvalid={!!errors.start}
+					ref={datePickerRef}
+					onFocus={e => { if (e.isTrusted) datePickerRef.current?.showPicker()} }
 				/>
 				<Form.Control.Feedback type="invalid">
 					{errors.start}
@@ -113,6 +122,8 @@ interface ActivityProps {
 const PeriodicScheduleFollowingActivityEditor = (props: ActivityProps) => {
 	const { task, errors, onScheduleChanged } = props;
 
+	const datePickerRef = useRef<HTMLInputElement>(null);
+
 	return (
 		<>
 			<Form.Group style={{marginTop: "1em"}}>
@@ -122,7 +133,9 @@ const PeriodicScheduleFollowingActivityEditor = (props: ActivityProps) => {
 					value={task.start ?? ""}
 					onChange={e => onScheduleChanged({...task, start: e.target.value})}
 					isInvalid={!!errors.start}
-					/>
+					ref={datePickerRef}
+					onFocus={e => { if (e.isTrusted) datePickerRef.current?.showPicker() } }
+				/>
 				<Form.Control.Feedback type="invalid">
 					{errors.start}
 				</Form.Control.Feedback>
