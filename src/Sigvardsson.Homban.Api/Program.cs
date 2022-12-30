@@ -100,7 +100,7 @@ public static class Program
         app.UseAuthorization();
         app.UseAuthentication();
         app.MapControllers();
-        app.UseWebSockets();
+        app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30)});
         await app.RunAsync();
 
         return 0;
