@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -122,10 +123,53 @@ public class BackingStoreService : IBackingStoreService, IDisposable
         return schedule switch
         {
             OneTimeScheduleStorageObject ots => new OneTimeSchedule(ots.When),
-            PeriodicScheduleFollowingActivityStorageObject fa => new PeriodicScheduleFollowingActivity(fa.Start, fa.Period),
-            PeriodicScheduleFollowingCalendarStorageObject fc => new PeriodicScheduleFollowingActivity(fc.Start, fc.Period),
+            PeriodicScheduleFollowingActivityStorageObject fa => new PeriodicScheduleFollowingActivity(fa.Start, ToDuration(fa.Period)),
+            PeriodicScheduleFollowingCalendarStorageObject fc => new PeriodicScheduleFollowingActivity(fc.Start, ToDuration(fc.Period)),
             _ => throw new ArgumentException($"Unknown schedule object {schedule.GetType().FullName}")
         };
+    }
+
+    private Duration ToDuration(string durationText)
+    {
+        // This function is transitory - it is there to handle old serialized data that
+        // used "TimeSpan" for duration. This can be removed before the release after this one!
+        if (TimeSpan.TryParse(durationText, out var timeSpan))
+        {
+            // It's an old time span! Let's convert it into a "new" duration, and be happy with that
+            var years = (int) timeSpan.TotalDays / 365;
+            if (years > 0)
+                timeSpan = timeSpan - TimeSpan.FromDays(years * 365);
+
+            var months = (int) timeSpan.TotalDays / 30;
+            if (months > 0)
+                timeSpan = timeSpan - TimeSpan.FromDays(months * 30);
+            
+            var halfYears = months / 6;
+            if (halfYears > 0)
+                months -= halfYears * 6;
+
+            var quarters = months / 3;
+            if (quarters > 0)
+                months -= quarters * 3;
+
+            var weeks = (int) timeSpan.TotalDays / 7;
+            if (weeks > 0)
+                timeSpan = timeSpan - TimeSpan.FromDays(weeks * 7);
+
+            return new Duration(
+                Years: years,
+                HalfYears: halfYears,
+                Quarters: quarters,
+                Months: months,
+                Weeks: weeks,
+                Days: timeSpan.Days,
+                Hours: timeSpan.Hours,
+                Minutes: timeSpan.Minutes,
+                Seconds: timeSpan.Seconds
+            );
+        }
+
+        return Duration.Parse(durationText);
     }
     
     private BoardStorageObject FromModel(Board board)
@@ -159,8 +203,8 @@ public class BackingStoreService : IBackingStoreService, IDisposable
         return schedule switch
         {
             OneTimeSchedule ots => new OneTimeScheduleStorageObject { When = ots.When },
-            PeriodicScheduleFollowingActivity fa => new PeriodicScheduleFollowingActivityStorageObject { Start = fa.Start, Period = fa.Period },
-            PeriodicScheduleFollowingCalendar fc => new PeriodicScheduleFollowingActivityStorageObject { Start = fc.Start, Period = fc.Period },
+            PeriodicScheduleFollowingActivity fa => new PeriodicScheduleFollowingActivityStorageObject { Start = fa.Start, Period = fa.Period.ToString() },
+            PeriodicScheduleFollowingCalendar fc => new PeriodicScheduleFollowingActivityStorageObject { Start = fc.Start, Period = fc.Period.ToString() },
             _ => throw new ArgumentException($"Unknown schedule object {schedule.GetType().FullName}")
         };
     }
@@ -190,16 +234,18 @@ public abstract class ScheduleStorageObject
 {
 }
 
+[SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
+[SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
 public class PeriodicScheduleFollowingCalendarStorageObject : ScheduleStorageObject
 {
     public required DateTimeOffset Start { get; init; }
-    public required TimeSpan Period { get; init; }
+    public required string Period { get; init; }
 }
 
 public class PeriodicScheduleFollowingActivityStorageObject : ScheduleStorageObject
 {
     public required DateTimeOffset Start { get; init; }
-    public required TimeSpan Period { get; init; }
+    public required string Period { get; init; }
 }
 
 public class OneTimeScheduleStorageObject : ScheduleStorageObject

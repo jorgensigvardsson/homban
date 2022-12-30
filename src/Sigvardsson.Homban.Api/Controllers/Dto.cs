@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace Sigvardsson.Homban.Api.Controllers;
 
@@ -56,13 +57,13 @@ public abstract class Schedule
 public class PeriodicScheduleFollowingCalendar : Schedule
 {
     public required DateTimeOffset Start { get; init; }
-    public required TimeSpan Period { get; init; }
+    public required string Period { get; init; }
 }
 
 public class PeriodicScheduleFollowingActivity : Schedule
 {
     public required DateTimeOffset Start { get; init; }
-    public required TimeSpan Period { get; init; }
+    public required string Period { get; init; }
 }
 
 public class OneTimeSchedule : Schedule
@@ -72,7 +73,6 @@ public class OneTimeSchedule : Schedule
 
 // ReSharper restore UnusedAutoPropertyAccessor.Global
 // ReSharper restore NotAccessedPositionalProperty.Global
-
 class ScheduleConverter : JsonConverter<Schedule>
 {
     public override void WriteJson(JsonWriter writer, Schedule? value, JsonSerializer serializer)
@@ -94,7 +94,7 @@ class ScheduleConverter : JsonConverter<Schedule>
                 writer.WritePropertyName("start");
                 writer.WriteValue(c.Start.ToString("O"));
                 writer.WritePropertyName("period");
-                writer.WriteValue(c.Period.ToString("c"));
+                writer.WriteValue(c.Period);
                 break;
             }
             case PeriodicScheduleFollowingActivity a:
@@ -103,7 +103,7 @@ class ScheduleConverter : JsonConverter<Schedule>
                 writer.WritePropertyName("start");
                 writer.WriteValue(a.Start.ToString("O"));
                 writer.WritePropertyName("period");
-                writer.WriteValue(a.Period.ToString("c"));
+                writer.WriteValue(a.Period);
                 break;
             }
             default:
@@ -123,10 +123,10 @@ class ScheduleConverter : JsonConverter<Schedule>
                 s = new OneTimeSchedule { When = DateTimeOffset.MinValue };
                 break;
             case "periodic-calendar":
-                s = new PeriodicScheduleFollowingCalendar { Start = DateTimeOffset.MinValue, Period = TimeSpan.Zero };
+                s = new PeriodicScheduleFollowingCalendar { Start = DateTimeOffset.MinValue, Period = "" };
                 break;
             case "periodic-activity":
-                s = new PeriodicScheduleFollowingActivity { Start = DateTimeOffset.MinValue, Period = TimeSpan.Zero };
+                s = new PeriodicScheduleFollowingActivity { Start = DateTimeOffset.MinValue, Period = "" };
                 break;
             default:
                 throw new ArgumentException($"Unknown schedule type '{o["type"]?.Value<string>()}");
@@ -181,8 +181,8 @@ public class DtoMapper : IDtoMapper
         schedule switch
         {
             OneTimeSchedule ots => new Services.OneTimeSchedule(ots.When),
-            PeriodicScheduleFollowingActivity fa => new Services.PeriodicScheduleFollowingActivity(fa.Start, fa.Period),
-            PeriodicScheduleFollowingCalendar fc => new Services.PeriodicScheduleFollowingCalendar(fc.Start, fc.Period),
+            PeriodicScheduleFollowingActivity fa => new Services.PeriodicScheduleFollowingActivity(fa.Start, Services.Duration.Parse(fa.Period)),
+            PeriodicScheduleFollowingCalendar fc => new Services.PeriodicScheduleFollowingCalendar(fc.Start, Services.Duration.Parse(fc.Period)),
             _ => throw new ArgumentException($"Unknown schedule {schedule.GetType().Name}")
         };
 
@@ -220,8 +220,8 @@ public class DtoMapper : IDtoMapper
         schedule switch
         {
             Services.OneTimeSchedule ots => new OneTimeSchedule { When = ots.When },
-            Services.PeriodicScheduleFollowingActivity fa => new PeriodicScheduleFollowingActivity { Start = fa.Start, Period = fa.Period },
-            Services.PeriodicScheduleFollowingCalendar fc => new PeriodicScheduleFollowingCalendar { Start = fc.Start, Period = fc.Period },
+            Services.PeriodicScheduleFollowingActivity fa => new PeriodicScheduleFollowingActivity { Start = fa.Start, Period = fa.Period.ToString() },
+            Services.PeriodicScheduleFollowingCalendar fc => new PeriodicScheduleFollowingCalendar { Start = fc.Start, Period = fc.Period.ToString() },
             _ => throw new ArgumentException($"Unknown schedule {schedule.GetType().Name}")
         };
 }

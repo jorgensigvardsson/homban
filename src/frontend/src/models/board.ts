@@ -1,4 +1,4 @@
-import { Duration } from 'moment';
+import { Duration } from "../duration";
 
 export type TaskDictionary = { [key: string]: Task }
 

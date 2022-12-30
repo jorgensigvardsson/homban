@@ -1,6 +1,7 @@
 import { Lane, Task as TaskModel } from '../models/board';
 import './Task.css';
 import { useState } from 'react';
+import { isDaily, isHalfYearly, isMonthly, isQuarterly, isWeekly, isYearly } from '../duration';
 
 interface Props {
 	task: TaskModel;
@@ -13,19 +14,19 @@ function pillText(task: TaskModel) {
 			return 'En gång';
 		case 'periodic-activity':
 		case 'periodic-calendar':
-			if (task.schedule.period.asDays() < 7)
-				return 'Dagligen';
-			if (task.schedule.period.asDays() < 14)
-				return 'Varje vecka';
-			if (task.schedule.period.asMonths() < 1)
-				return 'Varannan vecka';
-			if (task.schedule.period.asMonths() < 3)
-				return 'Varje månad';
-			if (task.schedule.period.asMonths() < 6)
-				return 'Varje kvartal';
-			if (task.schedule.period.asYears() < 1)
-				return 'Varje halvår';
-			return 'Årligen';
+			if (isYearly(task.schedule.period))
+				return "Årligen";
+			if (isHalfYearly(task.schedule.period))
+				return "Varje halvår";
+			if (isQuarterly(task.schedule.period))
+				return "Varje kvartal";
+			if (isMonthly(task.schedule.period))
+				return "Varje månad";
+			if (isWeekly(task.schedule.period))
+				return "Varje vecka";
+			if (isDaily(task.schedule.period))
+				return "Dagligen";
+			return 'Annat';
 	}
 }
 

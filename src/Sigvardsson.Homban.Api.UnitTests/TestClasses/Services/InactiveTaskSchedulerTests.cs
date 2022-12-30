@@ -69,7 +69,7 @@ public class InactiveTaskSchedulerTests : TestBase<InactiveTaskScheduler>
     {
         // Arrange
         var start = CreateSpecimen<DateTimeOffset>();
-        var period = CreateSpecimen<TimeSpan>();
+        var period = CreateSpecimen<Duration>();
         var now = CreateSpecimen<DateTimeOffset>();
         var task = CreateSpecimen<Task>() with
         {
@@ -82,7 +82,7 @@ public class InactiveTaskSchedulerTests : TestBase<InactiveTaskScheduler>
         var result = sut.ScheduleReady(task, now);
 
         // Assert
-        result.ShouldBe(task.LastMovedOffTheBoardTime.Value + period);
+        result.ShouldBe(period.AddToDate(task.LastMovedOffTheBoardTime.Value));
     }
     
     [Fact]
@@ -90,7 +90,7 @@ public class InactiveTaskSchedulerTests : TestBase<InactiveTaskScheduler>
     {
         // Arrange
         var start = CreateSpecimen<DateTimeOffset>();
-        var period = CreateSpecimen<TimeSpan>();
+        var period = CreateSpecimen<Duration>();
         var now = CreateSpecimen<DateTimeOffset>();
         var task = CreateSpecimen<Task>() with
         {
@@ -111,7 +111,7 @@ public class InactiveTaskSchedulerTests : TestBase<InactiveTaskScheduler>
     {
         // Arrange
         var start = CreateSpecimen<DateTimeOffset>();
-        var period = CreateSpecimen<TimeSpan>();
+        var period = CreateSpecimen<Duration>();
         var now = CreateSpecimen<DateTimeOffset>();
         var task = CreateSpecimen<Task>() with
         {
@@ -124,6 +124,6 @@ public class InactiveTaskSchedulerTests : TestBase<InactiveTaskScheduler>
         var result = sut.ScheduleReady(task, now);
 
         // Assert
-        result.ShouldBe(task.LastMovedOnToBoardTime + period);
+        result.ShouldBe(period.AddToDate(task.LastMovedOnToBoardTime));
     }
 }

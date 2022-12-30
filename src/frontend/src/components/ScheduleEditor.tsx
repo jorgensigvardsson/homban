@@ -66,7 +66,7 @@ const OneTimeScheduleEditor = (props: OneTimeProps) => {
 	)
 }
 
-const PeriodHint = () => <>Units: y(ear), q(uarter), mo(nth), w(eek), d(ay). Examples: <i>3 weeks</i>, <i>3 w</i>, <i>3 week</i></>
+const PeriodHint = () => <>Units: y(ear), ha(lfyear), q(uarter), mo(nth), w(eek), d(ay). Examples: <i>3 weeks</i>, <i>3 w</i>, <i>3 week</i></>
 
 interface CalendarProps {
 	task: TaskBeingEdited;

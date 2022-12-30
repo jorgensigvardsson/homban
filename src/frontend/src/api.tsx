@@ -1,6 +1,7 @@
 import jwtDecode, { JwtPayload } from "jwt-decode";
-import moment, { Duration } from "moment";
+import moment from "moment";
 import React from "react";
+import { formatDuration, parseDurationStrict } from "./duration";
 import { Board, Schedule, Task, BoardAndTask, TaskData, TaskDictionary, Lane, IdentifiedTask } from "./models/board";
 
 export interface Api {
@@ -452,13 +453,13 @@ function scheduleToModel(dto: ScheduleDto): Schedule {
 		case "periodic-activity":
 			return {
 				type: "periodic-activity",
-				period: parseDuration(dto.period),
+				period: parseDurationStrict(dto.period),
 				start: parseDate(dto.start)
 			}
 		case "periodic-calendar":
 			return {
 				type: "periodic-calendar",
-				period: parseDuration(dto.period),
+				period: parseDurationStrict(dto.period),
 				start: parseDate(dto.start)
 			}
 		default:
@@ -476,13 +477,13 @@ function scheduleToDto(model: Schedule): ScheduleDto {
 		case "periodic-activity":
 			return {
 				type: "periodic-activity",
-				period: formatDtoDuration(model.period),
+				period: formatDuration(model.period),
 				start: moment(model.start).format("yyyy-MM-DD")
 			}
 		case "periodic-calendar":
 			return {
 				type: "periodic-calendar",
-				period: formatDtoDuration(model.period),
+				period: formatDuration(model.period),
 				start: moment(model.start).format("yyyy-MM-DD")
 			}
 		default:
@@ -490,36 +491,8 @@ function scheduleToDto(model: Schedule): ScheduleDto {
 	}
 }
 
-function formatDtoDuration(duration: Duration): string {
-	const days = Math.floor(duration.asDays());
-	const hours = duration.hours();
-	const minutes = duration.minutes();
-	const seconds = duration.seconds();
-
-	if (days > 0) {
-		return `${days}.${hours}:${minutes}:${seconds}`
-	}
-
-	return `${hours}:${minutes}:${seconds}`
-}
-
 function parseDate(start: string): Date {
 	return moment(start).toDate();
-}
-
-function parseDuration(period: string): Duration {
-	const match = /^((?<days>\d+)\.)?(?<hours>\d{2}):(?<minutes>\d{2}):(?<seconds>\d{2})(\.(?<decims>\d{7}))?$/.exec(period);
-
-	if (!match || !match.groups)
-		throw new Error(`Invalid duration ${period}`);
-
-	return moment.duration({
-		days: match.groups.days ? parseInt(match.groups.days) : 0,
-		hours: parseInt(match.groups.hours),
-		minutes: parseInt(match.groups.minutes),
-		seconds: parseInt(match.groups.seconds),
-		millisecond: match.groups.decim ? parseFloat(match.groups.decims) / (10 * 1000) : 0
-	})
 }
 
 export interface BoardUpdate {

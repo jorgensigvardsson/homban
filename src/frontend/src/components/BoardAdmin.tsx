@@ -9,6 +9,7 @@ import Button from 'react-bootstrap/Button';
 import Container from "react-bootstrap/Container"
 import Row from "react-bootstrap/Row"
 import Col from "react-bootstrap/Col"
+import { formatDuration, parseDuration, parseDurationStrict } from "../duration"
 
 interface Props {
 	board: Board;
@@ -265,8 +266,9 @@ const areTasksEqual = (original: Task, current: TaskBeingEdited) => {
 			return current.when && original.schedule.when.toDateString() === parseDate(current.when)?.toDateString();
 		case "periodic-activity":
 		case "periodic-calendar":
+			const currentPeriodFormatted = current.period ? parseDuration(current.period) : null;
 			return current.start && original.schedule.start.toDateString() === parseDate(current.start)?.toDateString() &&
-			       current.period && original.schedule.period.toISOString() === parseDuration(current.period)?.toISOString();
+			       current.period && currentPeriodFormatted && formatDuration(original.schedule.period) === formatDuration(currentPeriodFormatted);
 		default:
 			return false;
 	}
@@ -281,62 +283,9 @@ const parseDate = (text: string) => {
 	return new Date(parseInt(match.groups!.year), parseInt(match.groups!.month) - 1, parseInt(match.groups!.day));
 }
 
-const durationRegex = /^((?<years>\d+)\s*y(ear(s)?)?)?\s*((?<quarters>\d+)\s*q(uarter(s)?)?)?\s*((?<months>\d+)\s*mo(nth(s)?)?)?\s*((?<weeks>\d+)\s*w(eek(s)?)?)?\s*((?<days>\d+)\s*d(ay(s)?)?)?\s*((?<hours>\d+)\s*h(our(s)?)?)?\s*((?<minutes>\d+)\s*m(inute(s)?)?)?\s*((?<seconds>\d+)\s*s(econd(s)?)?)?\s*$/
-const parseDuration = (text: string) => {
-	const match = text.match(durationRegex);
-	if (!match)
-		return null;
-
-	return moment.duration({
-		years: match.groups?.years ? parseInt(match.groups.years) : 0,
-		months: match.groups?.months ? parseInt(match.groups.months) : 0,
-		quarters: match.groups?.quarters ? parseInt(match.groups.quarters) : 0,
-		weeks: match.groups?.weeks ? parseInt(match.groups.weeks) : 0,
-		days: match.groups?.days ? parseInt(match.groups.days) : 0,
-		hours: match.groups?.hours ? parseInt(match.groups.hours) : 0,
-		minutes: match.groups?.minutes ? parseInt(match.groups.minutes) : 0,
-		seconds: match.groups?.seconds ? parseInt(match.groups.seconds) : 0
-	})
-}
-
-const parseDurationStrict = (text: string) => {
-	const duration = parseDuration(text);
-	if (!duration)
-		throw new Error(`Invalid duration ${text}`)
-	return duration;
-}
-
 const parseDateStrict = (text: string) => {
 	const date = parseDate(text);
 	if (!date)
 		throw new Error(`Invalid date ${text}`)
 	return date;
-}
-
-const formatDuration = (duration: moment.Duration) => {
-	let durationString = "";
-
-	const append = (amount: number, unit: string) => {
-		if (amount > 0) {
-			if (durationString)
-				durationString += " ";
-			durationString += `${amount} ${unit}${amount > 1 ? "s" : ""}`;
-		}
-	}
-
-	const quarters = Math.floor(duration.months() / 3);
-	const months = duration.months() % 3;
-	const weeks = Math.floor(duration.days() / 7);
-	const days = duration.days() % 7; 
-
-	append(duration.years(), "year");
-	append(quarters, "quarter");
-	append(months, "month");
-	append(weeks, "week");
-	append(days, "day");
-	append(duration.hours(), "hour");
-	append(duration.minutes(), "minute");
-	append(duration.seconds(), "second");
-
-	return durationString;
 }
