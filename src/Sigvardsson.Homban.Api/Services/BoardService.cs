@@ -51,26 +51,31 @@ public class BoardService : IBoardService, IDisposable
         m_mutex.Dispose();
     }
 
+    // Assumes the mutex is locked!
+    private async Task<Board> GetBoard(CancellationToken cancellationToken)
+    {
+        return m_board ??= await m_backingStoreService.Get(cancellationToken);
+    }
+
+    private void SetBoard(Board board) => m_board = board;
+
     public Task<Board> ReadBoard(CancellationToken cancellationToken)
     {
-        return m_mutex.Locked(async () =>
-        {
-            m_board ??= await m_backingStoreService.Get(cancellationToken);
-            return m_board;
-        }, cancellationToken);
+        return m_mutex.Locked(async () => await GetBoard(CancellationToken.None), cancellationToken);
     }
 
     private Task<BoardAndTask> EditBoard(Func<Board, BoardAndTask> editor, CancellationToken cancellationToken)
     {
         return m_mutex.Locked(async () =>
         {
-            var boardAndTask = editor(m_board ?? await m_backingStoreService.Get(cancellationToken));
-            if (ReferenceEquals(boardAndTask.Board, m_board))
+            var board = await GetBoard(cancellationToken);
+            var boardAndTask = editor(board);
+            if (ReferenceEquals(boardAndTask.Board, board))
                 return boardAndTask;
             
             await m_backingStoreService.Set(boardAndTask.Board, cancellationToken);
-            m_board = boardAndTask.Board;
-            await FireObservers(m_board);
+            SetBoard(boardAndTask.Board);
+            await FireObservers(boardAndTask.Board);
             return boardAndTask;
         }, cancellationToken);
     }
@@ -79,14 +84,15 @@ public class BoardService : IBoardService, IDisposable
     {
         return m_mutex.Locked(async () =>
         {
-            var newBoard = editor(m_board ?? await m_backingStoreService.Get(cancellationToken));
-            if (ReferenceEquals(newBoard, m_board))
-                return m_board;
+            var board = await GetBoard(cancellationToken);
+            var newBoard = editor(board);
+            if (ReferenceEquals(newBoard, board))
+                return board;
                 
             await m_backingStoreService.Set(newBoard, cancellationToken);
-            m_board = newBoard;
-            await FireObservers(m_board);
-            return m_board;
+            SetBoard(newBoard);
+            await FireObservers(newBoard);
+            return newBoard;
         }, cancellationToken);
     }
 
@@ -235,6 +241,7 @@ public class BoardService : IBoardService, IDisposable
 
             return new BoardAndTask(board with
             {
+                Tasks = board.Tasks.SetItem(newTask.Id, newTask),
                 ReadyLaneTasks = readyLaneTasks,
                 InProgressLaneTasks = inProgressLaneTasks,
                 DoneLaneTasks = doneLaneTasks,

@@ -2,17 +2,15 @@ using System;
 using AutoFixture;
 using Shouldly;
 using Sigvardsson.Homban.Api.Services;
+using Sigvardsson.Homban.Api.UnitTests.Infrastructure;
 using Xunit;
 
-namespace Sigvardsson.Homban.Api.UnitTests.TestClasses;
+namespace Sigvardsson.Homban.Api.UnitTests.TestClasses.Services;
 
-public class InactiveTaskSchedulerTests
+public class InactiveTaskSchedulerTests : TestBase<InactiveTaskScheduler>
 {
-    private readonly Fixture m_fixture;
-
     public InactiveTaskSchedulerTests()
     {
-        m_fixture = new Fixture();
         m_fixture.Customize<Schedule>(
             c => c.FromFactory(() =>
             {
@@ -30,9 +28,9 @@ public class InactiveTaskSchedulerTests
     public void OneTimeSchedule_OneTimeSchedule_HasNeverBeenMovedOffTheBoard()
     {
         // Arrange
-        var when = m_fixture.Create<DateTimeOffset>();
-        var now = m_fixture.Create<DateTimeOffset>();
-        var task = m_fixture.Create<Task>() with
+        var when = CreateSpecimen<DateTimeOffset>();
+        var now = CreateSpecimen<DateTimeOffset>();
+        var task = CreateSpecimen<Task>() with
         {
             Schedule = new OneTimeSchedule(when),
             LastMovedOffTheBoardTime = null
@@ -50,12 +48,12 @@ public class InactiveTaskSchedulerTests
     public void OneTimeSchedule_OneTimeSchedule_HasBeenMovedOffTheBoard()
     {
         // Arrange
-        var when = m_fixture.Create<DateTimeOffset>();
-        var now = m_fixture.Create<DateTimeOffset>();
-        var task = m_fixture.Create<Task>() with
+        var when = CreateSpecimen<DateTimeOffset>();
+        var now = CreateSpecimen<DateTimeOffset>();
+        var task = CreateSpecimen<Task>() with
         {
             Schedule = new OneTimeSchedule(when),
-            LastMovedOffTheBoardTime = m_fixture.Create<DateTimeOffset>()
+            LastMovedOffTheBoardTime = CreateSpecimen<DateTimeOffset>()
         };
 
         // Act
@@ -70,13 +68,13 @@ public class InactiveTaskSchedulerTests
     public void OneTimeSchedule_PeriodicScheduleFollowingActivity_HasBeenMovedOffTheBoard()
     {
         // Arrange
-        var start = m_fixture.Create<DateTimeOffset>();
-        var period = m_fixture.Create<TimeSpan>();
-        var now = m_fixture.Create<DateTimeOffset>();
-        var task = m_fixture.Create<Task>() with
+        var start = CreateSpecimen<DateTimeOffset>();
+        var period = CreateSpecimen<TimeSpan>();
+        var now = CreateSpecimen<DateTimeOffset>();
+        var task = CreateSpecimen<Task>() with
         {
             Schedule = new PeriodicScheduleFollowingActivity(start, period),
-            LastMovedOffTheBoardTime = m_fixture.Create<DateTimeOffset>()
+            LastMovedOffTheBoardTime = CreateSpecimen<DateTimeOffset>()
         };
 
         // Act
@@ -91,10 +89,10 @@ public class InactiveTaskSchedulerTests
     public void OneTimeSchedule_PeriodicScheduleFollowingActivity_HasNotBeenMovedOffTheBoard()
     {
         // Arrange
-        var start = m_fixture.Create<DateTimeOffset>();
-        var period = m_fixture.Create<TimeSpan>();
-        var now = m_fixture.Create<DateTimeOffset>();
-        var task = m_fixture.Create<Task>() with
+        var start = CreateSpecimen<DateTimeOffset>();
+        var period = CreateSpecimen<TimeSpan>();
+        var now = CreateSpecimen<DateTimeOffset>();
+        var task = CreateSpecimen<Task>() with
         {
             Schedule = new PeriodicScheduleFollowingActivity(start, period),
             LastMovedOffTheBoardTime = null
@@ -112,13 +110,13 @@ public class InactiveTaskSchedulerTests
     public void OneTimeSchedule_PeriodicScheduleFollowingCalendar()
     {
         // Arrange
-        var start = m_fixture.Create<DateTimeOffset>();
-        var period = m_fixture.Create<TimeSpan>();
-        var now = m_fixture.Create<DateTimeOffset>();
-        var task = m_fixture.Create<Task>() with
+        var start = CreateSpecimen<DateTimeOffset>();
+        var period = CreateSpecimen<TimeSpan>();
+        var now = CreateSpecimen<DateTimeOffset>();
+        var task = CreateSpecimen<Task>() with
         {
             Schedule = new PeriodicScheduleFollowingCalendar(start, period),
-            LastMovedOnToBoardTime = m_fixture.Create<DateTimeOffset>()
+            LastMovedOnToBoardTime = CreateSpecimen<DateTimeOffset>()
         };
 
         // Act

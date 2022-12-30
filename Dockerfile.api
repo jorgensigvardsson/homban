@@ -1,8 +1,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:7.0 as build
 
-COPY ./src/Sigvardsson.Homban.Api /src/
+COPY ./src/ /src/
 
-RUN dotnet publish -c Release -o /build --runtime linux-musl-x64 --self-contained true /src/Sigvardsson.Homban.Api.csproj
+RUN dotnet test -c Release /src/Sigvardsson.Homban.Api.UnitTests/Sigvardsson.Homban.Api.UnitTests.csproj
+RUN dotnet publish -c Release -o /build --runtime linux-musl-x64 --self-contained true /src/Sigvardsson.Homban.Api/Sigvardsson.Homban.Api.csproj
 
 FROM mcr.microsoft.com/dotnet/aspnet:7.0-alpine-amd64
 

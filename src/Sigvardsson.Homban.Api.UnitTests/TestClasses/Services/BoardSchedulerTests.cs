@@ -5,21 +5,19 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoFixture;
-using Microsoft.Extensions.Logging;
 using Moq;
 using Shouldly;
 using Sigvardsson.Homban.Api.Services;
+using Sigvardsson.Homban.Api.UnitTests.Infrastructure;
 using Xunit;
 using Task = Sigvardsson.Homban.Api.Services.Task;
 using ThreadTask = System.Threading.Tasks.Task;
 
-namespace Sigvardsson.Homban.Api.UnitTests.TestClasses;
+namespace Sigvardsson.Homban.Api.UnitTests.TestClasses.Services;
 
 [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
-public class BoardSchedulerTests
+public class BoardSchedulerTests : TestBase<BoardScheduler>
 {
-    private readonly Fixture m_fixture = new ();
-    
     private readonly Mock<IBoardService> m_boardService;
     private readonly Mock<IInactiveTaskScheduler> m_inactiveTaskScheduler;
     private readonly Mock<IThreadControl> m_threadControl;
@@ -27,10 +25,10 @@ public class BoardSchedulerTests
 
     public BoardSchedulerTests()
     {
-        m_boardService = m_fixture.Freeze<Mock<IBoardService>>(c => c.OmitAutoProperties());
-        m_inactiveTaskScheduler = m_fixture.Freeze<Mock<IInactiveTaskScheduler>>(c => c.OmitAutoProperties());
-        m_threadControl = m_fixture.Freeze<Mock<IThreadControl>>(c => c.OmitAutoProperties());
-        m_clock = m_fixture.Freeze<Mock<IClock>>(c => c.OmitAutoProperties());
+        m_boardService = InjectMock<IBoardService>();
+        m_inactiveTaskScheduler = InjectMock<IInactiveTaskScheduler>();
+        m_threadControl = InjectMock<IThreadControl>();
+        m_clock = InjectMock<IClock>();
         m_fixture.Customize<Schedule>(
             c => c.FromFactory(() =>
             {
@@ -41,16 +39,6 @@ public class BoardSchedulerTests
                     _ => m_fixture.Create<PeriodicScheduleFollowingCalendar>()
                 };
             })
-        );
-    }
-
-    private BoardScheduler CreateSut()
-    {
-        return new BoardScheduler(m_boardService.Object,
-                                  new Mock<ILogger<BoardScheduler>>().Object,
-                                  m_inactiveTaskScheduler.Object,
-                                  m_threadControl.Object,
-                                  m_clock.Object
         );
     }
 
