@@ -61,8 +61,15 @@ public class WebSocketController : ControllerBase
             return;
         }
 
-        using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-        await Serve(webSocket, cancellationToken);
+        try
+        {
+            using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+            await Serve(webSocket, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected
+        }
     }
 
     private bool ValidateToken(string token)
@@ -81,16 +88,29 @@ public class WebSocketController : ControllerBase
 
     private async ThreadTask Serve(WebSocket webSocket, CancellationToken cancellationToken)
     {
-        using var registration = m_boardService.RegisterObserver(board => HandleBoardEvent(webSocket, m_dtoMapper.FromModel(board), cancellationToken));
+        var combinedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        
+        using var registration = m_boardService.RegisterObserver(async board =>
+        {
+            try
+            {
+                await HandleBoardEvent(webSocket, m_dtoMapper.FromModel(board), combinedCancellationTokenSource.Token);
+            }
+            catch (Exception ex)
+            {
+                m_logger.LogError(ex, "Exception when handling web socket: {ErrorMessage}", ex.Message);
+                combinedCancellationTokenSource.Cancel();
+            }
+        });
         var receiveBuffer = new byte[4096];
 
-        var receiveResult = await webSocket.ReceiveAsync(receiveBuffer, cancellationToken);
-        await HandlePingPong(webSocket, receiveBuffer, receiveResult, cancellationToken);
+        var receiveResult = await webSocket.ReceiveAsync(receiveBuffer, combinedCancellationTokenSource.Token);
+        await HandlePingPong(webSocket, receiveBuffer, receiveResult, combinedCancellationTokenSource.Token);
         while (!receiveResult.CloseStatus.HasValue)
         {
             // We currently don't interpret any data that comes in on the web socket
-            receiveResult = await webSocket.ReceiveAsync(receiveBuffer, cancellationToken);
-            await HandlePingPong(webSocket, receiveBuffer, receiveResult, cancellationToken);
+            receiveResult = await webSocket.ReceiveAsync(receiveBuffer, combinedCancellationTokenSource.Token);
+            await HandlePingPong(webSocket, receiveBuffer, receiveResult, combinedCancellationTokenSource.Token);
         }
     }
 
