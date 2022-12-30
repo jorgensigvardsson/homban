@@ -153,7 +153,11 @@ public class BoardService : IBoardService, IDisposable
     {
         return EditBoard(board => board with
         {
-            Tasks = board.Tasks.Remove(taskId)
+            Tasks = board.Tasks.Remove(taskId),
+            ReadyLaneTasks = board.ReadyLaneTasks.Remove(taskId),
+            InProgressLaneTasks = board.InProgressLaneTasks.Remove(taskId),
+            DoneLaneTasks = board.DoneLaneTasks.Remove(taskId),
+            InactiveLaneTasks = board.InactiveLaneTasks.Remove(taskId)
         }, cancellationToken);
     }
 
