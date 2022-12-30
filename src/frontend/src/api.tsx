@@ -110,9 +110,12 @@ function post(path: string, body?: any): Promise<any> {
 	return body === undefined ? opWithoutBody("post", path) : opWithBody("post", path, body);
 }
 
+const PingInterval = 20 * 1000; // Ping web socket server ever 20 second
+
 export class ApiImplementation implements Api {
 	private webSocketDiedHandler: null | (() => void) = null;
 	private webSocket: WebSocket | null = null;
+	private intervalHandle: number | null = null;
 
 	async getBoard(): Promise<Board> {
 		return boardToModel(await get("board"));
@@ -162,6 +165,11 @@ export class ApiImplementation implements Api {
 
 		try {
 			this.webSocket = new WebSocket(baseWebSocketAddress("web-socket", token));
+			this.webSocket.onopen = () => {
+				this.intervalHandle = window.setInterval(() => {
+					this.pingWebSocket();
+				}, PingInterval);
+			}
 			this.webSocket.onmessage = (evt: MessageEvent) => {
 				const obj = JSON.parse(evt.data);
 
@@ -173,29 +181,49 @@ export class ApiImplementation implements Api {
 								board: boardToModel(obj.payload)
 							})
 							break;
+						case "pong":
+							// We sent a ping earlier, server responded with pong!
+							break;
 					}
-					callback(evt.data);
 				} else {
 					console.error("Unknown WS message received");
 				}
 			}
 
-			if (this.webSocketDiedHandler) {
-				this.webSocket.onerror = () => {
-					if (this.webSocketDiedHandler)
-						this.webSocketDiedHandler();
+			this.webSocket.onerror = () => {
+				if (this.intervalHandle !== null) {
+					window.clearInterval(this.intervalHandle);
+					this.intervalHandle = null;
 				}
+
+				if (this.webSocketDiedHandler)
+					this.webSocketDiedHandler();
 			}
 
-			if (this.webSocketDiedHandler) {
-				this.webSocket.onclose = () => {
-					if (this.webSocketDiedHandler)
-						this.webSocketDiedHandler();
+			this.webSocket.onclose = () => {
+				if (this.intervalHandle !== null) {
+					window.clearInterval(this.intervalHandle);
+					this.intervalHandle = null;
 				}
+
+				if (this.webSocketDiedHandler)
+					this.webSocketDiedHandler();
 			}
 		} catch (error) {
 			console.error(error);
 		}
+	}
+
+	private pingWebSocket(): void {
+		if (!token)
+			throw new Error("No authentication performed. Quitting.");
+
+		if (!this.webSocket || this.webSocket.readyState !== WebSocket.OPEN)
+			throw new Error("Web socket is not connected.");
+		
+		this.webSocket.send(JSON.stringify({
+			type: "ping"
+		}));
 	}
 
 	async checkAuth(): Promise<boolean> {

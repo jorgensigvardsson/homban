@@ -85,18 +85,73 @@ public class WebSocketController : ControllerBase
         var receiveBuffer = new byte[4096];
 
         var receiveResult = await webSocket.ReceiveAsync(receiveBuffer, cancellationToken);
+        await HandlePingPong(webSocket, receiveBuffer, receiveResult, cancellationToken);
         while (!receiveResult.CloseStatus.HasValue)
         {
             // We currently don't interpret any data that comes in on the web socket
             receiveResult = await webSocket.ReceiveAsync(receiveBuffer, cancellationToken);
+            await HandlePingPong(webSocket, receiveBuffer, receiveResult, cancellationToken);
         }
+    }
+
+    private async ThreadTask HandlePingPong(WebSocket webSocket, byte[] buffer, WebSocketReceiveResult receiveResult, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (receiveResult.MessageType != WebSocketMessageType.Text)
+            {
+                m_logger.LogWarning("Received non text web socket message");
+                return;
+            }
+
+            if (!receiveResult.EndOfMessage)
+            {
+                m_logger.LogWarning("Received fragmented text message over web socket");
+                return;
+            }
+
+            using var memoryStream = new MemoryStream(buffer, 0, receiveResult.Count);
+            var message = m_jsonSerializer.Deserialize<WebSocketMessage>(memoryStream);
+            if (message == null)
+            {
+                m_logger.LogWarning("Failed to deserialize web socket text message as a WebSocketMessage");
+                return;
+            }
+
+            if (message.Type != MessageType.Ping)
+            {
+                m_logger.LogWarning("Unexpected WebSocketMessage: {Type}", message.Type.ToString("G"));
+                return;
+            }
+
+            await SendPong(webSocket, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            m_logger.LogError(ex, "Failed to handle ping pong: {ErrorMessage}", ex.Message);
+        }
+    }
+
+    private async ThreadTask SendPong(WebSocket webSocket, CancellationToken cancellationToken)
+    {
+        await using var memoryStream = new MemoryStream();
+
+        m_jsonSerializer.Serialize(memoryStream, new WebSocketMessage { Type = MessageType.Pong });
+
+        if (!memoryStream.TryGetBuffer(out var segment))
+        {
+            m_logger.LogError("Failed to get buffer segment after serialization!");
+            return;
+        }
+
+        await webSocket.SendAsync(segment, WebSocketMessageType.Text, true, cancellationToken);
     }
 
     private async ThreadTask HandleBoardEvent(WebSocket webSocket, Board board, CancellationToken cancellationToken)
     {
         await using var memoryStream = new MemoryStream();
 
-        m_jsonSerializer.Serialize(memoryStream, new WebSocketMessage(MessageType.Board, board));
+        m_jsonSerializer.Serialize(memoryStream, new WebSocketMessage { Type = MessageType.Board, Payload = board });
 
         if (!memoryStream.TryGetBuffer(out var segment))
         {
@@ -112,8 +167,17 @@ public class WebSocketController : ControllerBase
 public enum MessageType
 {
     [EnumMember(Value="board")]
-    Board
+    Board,
+    [EnumMember(Value="ping")]
+    Ping,
+    [EnumMember(Value="pong")]
+    Pong
 }
 
 [SuppressMessage("ReSharper", "NotAccessedPositionalProperty.Global")]
-public record WebSocketMessage(MessageType Type, object? Payload);
+[SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
+public class WebSocketMessage
+{
+    public required MessageType Type { get; init; }
+    public object? Payload { get; init; }
+}
