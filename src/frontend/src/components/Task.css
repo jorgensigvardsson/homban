@@ -1,40 +1,47 @@
-.Task {
+.task {
 	color: black;
 	padding: 0.4em;
 	border-color: gray;
-	border-style: dashed;
+	border-style: solid;
 	border-width: 1px;
+	border-radius: 4px;
+	margin: 0.3em;
+	background-color: white;
+	display: grid;
 }
 
-.Task .Title {
+.task .pill-row {
 	display: flex;
-	justify-content: space-between;
+	margin-top: 4px;
+	justify-content: flex-end;
 }
 
-.Daily {
-	background-color: yellow;
+.task .pill-row .pill {
+	border-radius: 5px;
+	padding: 4px;
+	font-size: xx-small;
+	font-weight: bold;
+	text-transform: uppercase;
 }
 
-.Weekly {
-	background-color: orange;
+.task .pill-row .pill.period {
+	background-color: lightgray;
 }
 
-.BiWeekly {
-	background-color: coral;
+.task .content, .task .done {
+	grid-area: 1 / 1;
 }
 
-.Monthly {
-	background-color: hotpink
+.task .done {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	transform: rotate(-45deg);
+	color: green;
+	font-size: x-large;
+	font-weight: bolder;
 }
 
-.Quarterly {
-	background-color: fuchsia
-}
-
-.Yearly {
-	background-color: crimson;
-}
-
-.OneShot {
-	background-color: cadetblue;
+.task .title {
+	font-weight: bolder;
 }

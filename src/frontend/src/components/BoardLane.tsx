@@ -16,7 +16,7 @@ export const BoardLane = (props: Props) => {
 					<div ref={provided.innerRef}
 					     {...provided.draggableProps}
 					     {...provided.dragHandleProps}>
-						<Task task={t}/>
+						<Task task={t} lane={props.lane}/>
 					</div>
 				)}
 			</Draggable>

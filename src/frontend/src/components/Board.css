@@ -1,11 +1,21 @@
-
 .Board {
 	display: grid;
 	grid-template-columns: 1fr 1fr 1fr;
-	grid-template-rows: auto 1fr;
+	grid-template-rows: 1fr;
+	height: calc(100vh - 42px - 1.5em);
+	overflow-y: auto;
+}
+
+.BoardTitle {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	grid-template-rows: 1.5em;
 }
 
 .LaneTitle {
 	grid-row: 1 / span 1;
 	font-weight: bold;
+	display: flex;
+	justify-content: center;
+	background-color: lightgray;
 }

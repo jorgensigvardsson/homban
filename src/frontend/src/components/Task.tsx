@@ -1,57 +1,14 @@
-import { Task as TaskModel } from '../models/board';
+import { Lane, Task as TaskModel } from '../models/board';
 import './Task.css';
-import Card from 'react-bootstrap/Card';
+import { useState } from 'react';
 
 interface Props {
 	task: TaskModel;
+	lane: Lane;
 }
 
-function cardBackground(task: TaskModel) {
-	switch(task.schedule.type) {
-		case 'one-time':
-			return 'light';
-		case 'periodic-activity':
-		case 'periodic-calendar':
-			if (task.schedule.period.asDays() < 7)
-				return 'primary';
-			if (task.schedule.period.asDays() < 14)
-				return 'secondary';
-			if (task.schedule.period.asMonths() < 1)
-				return 'success';
-			if (task.schedule.period.asMonths() < 3)
-				return 'warning';
-			if (task.schedule.period.asMonths() < 6)
-				return 'warning';
-			if (task.schedule.period.asYears() < 1)
-				return 'danger';
-			return 'dark';
-	}
-}
-
-function cardForeground(task: TaskModel) {
-	switch(task.schedule.type) {
-		case 'one-time':
-			return 'light';
-		case 'periodic-activity':
-		case 'periodic-calendar':
-			if (task.schedule.period.asDays() < 7)
-				return 'light';
-			if (task.schedule.period.asDays() < 14)
-				return 'light';
-			if (task.schedule.period.asMonths() < 1)
-				return 'light';
-			if (task.schedule.period.asMonths() < 3)
-				return 'light';
-			if (task.schedule.period.asMonths() < 6)
-				return 'light';
-			if (task.schedule.period.asYears() < 1)
-				return 'light';
-			return 'dark';
-	}
-}
-
-function cardTitle(task: TaskModel) {
-	switch(task.schedule.type) {
+function pillText(task: TaskModel) {
+	switch (task.schedule.type) {
 		case 'one-time':
 			return 'En gång';
 		case 'periodic-activity':
@@ -68,18 +25,48 @@ function cardTitle(task: TaskModel) {
 				return 'Varje kvartal';
 			if (task.schedule.period.asYears() < 1)
 				return 'Varje halvår';
-			return 'dark';
+			return 'Årligen';
 	}
 }
 
+function generateMarkup(text: string) {
+	const markup = [];
+	const lines = text.split('\n');
+	for (let i = 0; i < lines.length; ++i) {
+		markup.push(<span key={`line${i}`}>{lines[i]}</span>);
+		if (i + 1 < lines.length)
+			markup.push(<br key={`newline${i}`}/>);
+	}
+	return markup;
+}
+
 export const Task = (props: Props) => {
-	return <Card bg={cardBackground(props.task)}
-	             text={cardForeground(props.task)}
-				 style={{ margin: "0.3em" }}>
-		<Card.Header>{cardTitle(props.task)}</Card.Header>
-		<Card.Body>
-			<Card.Title>{props.task.title}</Card.Title>
-			<Card.Text>{props.task.description}</Card.Text>
-		</Card.Body>
-	</Card>
+	const { task, lane } = props;
+
+	const shortDescriptionLength = 40;
+	const isLongDescription = task.description.length > shortDescriptionLength;
+	const descriptionFirstPart = isLongDescription ? `${task.description.substring(0, shortDescriptionLength)}...` : task.description;
+
+	const [showFullDescription, setShowFullDescription] = useState(false);
+
+	return (
+		<div className={`task ${lane}`} onDoubleClick={() => setShowFullDescription(!showFullDescription)} >
+			<div className="content">
+				<div>
+					<div className="title">{task.title}</div>
+					<div>
+						{!isLongDescription && task.description}
+						{isLongDescription && !showFullDescription && descriptionFirstPart}
+						{isLongDescription && showFullDescription && generateMarkup(task.description)}
+					</div>
+				</div>
+				<div className="pill-row">
+					<span className="pill period">{pillText(task)}</span>
+				</div>
+			</div>
+			{lane === Lane.Done && <div className='done'>
+				DONE
+			</div>}
+		</div>
+	)
 }
