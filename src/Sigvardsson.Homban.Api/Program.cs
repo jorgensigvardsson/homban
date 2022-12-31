@@ -1,5 +1,4 @@
 using System;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -9,6 +8,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
+using Serilog.Events;
+using Serilog.Sinks.Grafana.Loki;
+using Serilog.Sinks.SystemConsole.Themes;
 using Sigvardsson.Homban.Api.Controllers;
 using Sigvardsson.Homban.Api.Services;
 
@@ -81,6 +84,19 @@ public static class Program
                 return Array.Empty<Type>();
             });
         });
+        
+        builder.Host.UseSerilog((ctx, cfg) =>
+        {
+            cfg.Enrich.WithProperty("Application", ctx.HostingEnvironment.ApplicationName)
+               .Enrich.WithProperty("Environment", ctx.HostingEnvironment.EnvironmentName)
+               .WriteTo.Console(LogEventLevel.Information, theme: AnsiConsoleTheme.Code);
+
+            var lokiSink = ctx.Configuration["LokiSink"];
+            if (lokiSink != null && Uri.TryCreate(lokiSink, UriKind.Absolute, out _))
+            {
+                cfg.WriteTo.GrafanaLoki(lokiSink, new[] {new LokiLabel {Key = "Instance", Value = "Api"}}, restrictedToMinimumLevel: LogEventLevel.Information);
+            }
+        });
 
         var app = builder.Build();
         
@@ -101,9 +117,18 @@ public static class Program
         app.UseAuthentication();
         app.MapControllers();
         app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30)});
-        await app.RunAsync();
 
-        return 0;
+        app.UseSerilogRequestLogging();
+
+        try
+        {
+            await app.RunAsync();
+            return 0;
+        }
+        finally
+        {
+            await Log.CloseAndFlushAsync();
+        }
     }
 
     private static byte[] Hash(string input)

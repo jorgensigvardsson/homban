@@ -45,7 +45,7 @@ public class BoardScheduler : BackgroundService
                 boardChangedEventTask ??= m_boardChangedEvent.WaitAsync(stoppingToken);
                 
                 var expiredTask = await ThreadTask.WhenAny(
-                    m_threadControl.Delay(sleepDuration, stoppingToken),
+                    m_threadControl.Delay(sleepDuration.TotalMilliseconds > 4294967294 ? TimeSpan.FromMilliseconds(4294967294) : sleepDuration, stoppingToken),
                     boardChangedEventTask
                 );
 
