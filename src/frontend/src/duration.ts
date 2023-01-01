@@ -61,22 +61,38 @@ export interface Duration {
 	readonly seconds: number;
 }
 
+export type PartialDuration = Partial<Duration>;
+
+export function MakeDuration(v: PartialDuration): Duration {
+	return {
+		years: v.years ?? 0,
+		halfYears: v.halfYears ?? 0,
+		quarters: v.quarters ?? 0,
+		months: v.months ?? 0,
+		weeks: v.weeks ?? 0,
+		days: v.days ?? 0,
+		hours: v.hours ?? 0,
+		minutes: v.minutes ?? 0,
+		seconds: v.seconds ?? 0,
+	} 
+}
+
 export function optimize(duration: Duration): Duration {
 	let { years, halfYears, quarters, months, weeks, days, hours, minutes, seconds } = duration;
 
-	minutes += seconds / 60;
+	minutes += Math.floor(seconds / 60);
 	seconds = seconds % 60;
-	hours += minutes / 60;
+	hours += Math.floor(minutes / 60);
 	minutes = minutes % 60;
-	days += hours / 24;
+	days += Math.floor(hours / 24);
 	hours = hours % 24;
-	weeks += days / 7;
+	weeks += Math.floor(days / 7);
 	days = days % 7;
-	quarters += months / 3;
+	quarters += Math.floor(months / 3);
 	months = months % 3;
-	halfYears += quarters / 2;
+	halfYears += Math.floor(quarters / 2);
 	quarters = quarters % 2;
-	years += halfYears / 2;
+	years += Math.floor(halfYears / 2);
 	halfYears = halfYears % 2;
 
 	return {
@@ -84,39 +100,69 @@ export function optimize(duration: Duration): Duration {
 	}
 }
 
+function eq(d: Duration, d2: PartialDuration) {
+	return (d.years === (d2.years ?? 0)) &&
+	       (d.halfYears === (d2.halfYears ?? 0)) &&
+		   (d.quarters === (d2.quarters ?? 0)) &&
+		   (d.months === (d2.months ?? 0)) &&
+		   (d.weeks === (d2.weeks ?? 0)) &&
+		   (d.days === (d2.days ?? 0)) &&
+		   (d.hours === (d2.hours ?? 0)) &&
+		   (d.minutes === (d2.minutes ?? 0)) &&
+		   (d.seconds === (d2.seconds ?? 0));
+}
+
 
 export function isYearly(duration: Duration) {
 	duration = optimize(duration);
 
-	return duration.years === 1 && duration.halfYears === 0 && duration.quarters === 0 && duration.months === 0 && duration.weeks === 0 && duration.days === 0 && duration.hours === 0 && duration.minutes === 0 && duration.seconds === 0;
+	return eq(duration, { years: 1});
 }
 
 export function isHalfYearly(duration: Duration) {
 	duration = optimize(duration);
 
-	return duration.years === 0 && duration.halfYears === 1 && duration.quarters === 0 && duration.months === 0 && duration.weeks === 0 && duration.days === 0 && duration.hours === 0 && duration.minutes === 0 && duration.seconds === 0;
+	return eq(duration, { halfYears: 1});
 }
 
 export function isQuarterly(duration: Duration) {
 	duration = optimize(duration);
 
-	return duration.years === 0 && duration.halfYears === 0 && duration.quarters === 1 && duration.months === 0 && duration.weeks === 0 && duration.days === 0 && duration.hours === 0 && duration.minutes === 0 && duration.seconds === 0;
+	return eq(duration, { quarters: 1});
 }
 
 export function isMonthly(duration: Duration) {
 	duration = optimize(duration);
 
-	return duration.years === 0 && duration.halfYears === 0 && duration.quarters === 0 && duration.months === 1 && duration.weeks === 0 && duration.days === 0 && duration.hours === 0 && duration.minutes === 0 && duration.seconds === 0;
+	return eq(duration, { months: 1});
+}
+
+export function isBiMonthly(duration: Duration) {
+	duration = optimize(duration);
+
+	return eq(duration, { months: 2});
 }
 
 export function isWeekly(duration: Duration) {
 	duration = optimize(duration);
 
-	return duration.years === 0 && duration.halfYears === 0 && duration.quarters === 0 && duration.months === 0 && duration.weeks === 1 && duration.days === 0 && duration.hours === 0 && duration.minutes === 0 && duration.seconds === 0;
+	return eq(duration, { weeks: 1});
+}
+
+export function isBiWeekly(duration: Duration) {
+	duration = optimize(duration);
+
+	return eq(duration, { weeks: 2});
 }
 
 export function isDaily(duration: Duration) {
 	duration = optimize(duration);
 
-	return duration.years === 0 && duration.halfYears === 0 && duration.quarters === 0 && duration.months === 0 && duration.weeks === 0 && duration.days === 1 && duration.hours === 0 && duration.minutes === 0 && duration.seconds === 0;
+	return eq(duration, { days: 1});
+}
+
+export function isBiDaily(duration: Duration) {
+	duration = optimize(duration);
+
+	return eq(duration, { days: 2});
 }

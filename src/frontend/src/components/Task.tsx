@@ -1,32 +1,42 @@
-import { Lane, Task as TaskModel } from '../models/board';
+import { Lane,  Task as TaskModel } from '../models/board';
 import './Task.css';
 import { useState } from 'react';
-import { isDaily, isHalfYearly, isMonthly, isQuarterly, isWeekly, isYearly } from '../duration';
+import { Duration, isBiDaily, isBiMonthly, isBiWeekly, isDaily, isHalfYearly, isMonthly, isQuarterly, isWeekly, isYearly } from '../duration';
 
 interface Props {
 	task: TaskModel;
 	lane: Lane;
 }
 
-function pillText(task: TaskModel) {
+export function pillPeriodicText(period: Duration) {
+	if (isYearly(period))
+		return "Årligen";
+	if (isHalfYearly(period))
+		return "Varje halvår";
+	if (isQuarterly(period))
+		return "Varje kvartal";
+	if (isBiMonthly(period))
+		return "Varannan månad";
+	if (isMonthly(period))
+		return "Varje månad";
+	if (isBiWeekly(period))
+		return "Varannan vecka";
+	if (isWeekly(period))
+		return "Varje vecka";
+	if (isBiDaily(period))
+		return "Varannan dag";
+	if (isDaily(period))
+		return "Dagligen";
+	return 'Annat';
+}
+
+export function pillText(task: TaskModel) {
 	switch (task.schedule.type) {
 		case 'one-time':
 			return 'En gång';
 		case 'periodic-activity':
 		case 'periodic-calendar':
-			if (isYearly(task.schedule.period))
-				return "Årligen";
-			if (isHalfYearly(task.schedule.period))
-				return "Varje halvår";
-			if (isQuarterly(task.schedule.period))
-				return "Varje kvartal";
-			if (isMonthly(task.schedule.period))
-				return "Varje månad";
-			if (isWeekly(task.schedule.period))
-				return "Varje vecka";
-			if (isDaily(task.schedule.period))
-				return "Dagligen";
-			return 'Annat';
+			return pillPeriodicText(task.schedule.period);
 	}
 }
 
