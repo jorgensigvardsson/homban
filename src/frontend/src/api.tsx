@@ -24,8 +24,8 @@ let token: string | null = localStorage.getItem("jwt");
 
 const basePath = (path: string) => `api/${path}`;
 
-const origin = !process.env.NODE_ENV || process.env.NODE_ENV === 'development' ? "https://localhost:7099" : "";
-const wsOrigin = !process.env.NODE_ENV || process.env.NODE_ENV === 'development' ? "wss://localhost:7099" : `wss://${window.location.host}`;
+const origin = process.env.NODE_ENV && process.env.NODE_ENV === 'development' ? "https://localhost:7099" : "";
+const wsOrigin = process.env.NODE_ENV && process.env.NODE_ENV === 'development' ? "wss://localhost:7099" : `wss://${window.location.host}`;
 
 // TODO: Make this configurable!
 const baseAddress = (path: string) => {

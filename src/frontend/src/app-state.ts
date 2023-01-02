@@ -22,7 +22,7 @@ interface Transition {
 	action: Action | null
 }
 
-type StateChangedObserver = () => void;
+type StateChangedObserver = (oldState: State, newState: State) => void;
 
 export class StateMachine {
 	private state: State | null = null;
@@ -68,13 +68,14 @@ export class StateMachine {
 		if (!transition)
 			throw new Error(`Invalid operation: no transition defined for state (${this.state}) and event (${event}) combination`);
 
+		const oldState = this.state;
 		this.state = transition.nextState;
 
 		if (transition.action)
 			transition.action();
 
 		if (this.stateChangedObserver)
-			this.stateChangedObserver();
+			this.stateChangedObserver(oldState, transition.nextState);
 
 		return transition.nextState;
 	}

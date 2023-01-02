@@ -20,6 +20,10 @@ const ONE_HOUR_INTERVAL = 1000 /* ms -> s */ * 60 /* s -> min */ * 60 /* min -> 
 const api = new ApiImplementation();
 let board: Board | null = null;
 
+const showCause = process.env.NODE_ENV && process.env.NODE_ENV === 'development'
+	? (state: State, cause: string) => console.info(`render: state = ${state}, cause = ${cause}`)
+	: () => {}
+
 const stateMachine = new StateMachine();
 stateMachine.currentState = State.Start;
 stateMachine.addTransition(State.Start, Event.Check, State.Checking, () => check());
@@ -32,7 +36,10 @@ stateMachine.addTransition(State.WantCredentials, Event.Connect, State.Connectin
 stateMachine.addTransition(State.Running, Event.Reconnect, State.Checking, () => check());
 stateMachine.addTransition(State.FetchingBoard, Event.Reconnect, State.Checking, () => check());
 
-stateMachine.stateChangedObserver = () => render();
+stateMachine.stateChangedObserver = (oldState, newState) => {
+	render(`${oldState} -> ${newState}`);
+}
+
 stateMachine.execute(Event.Check); // Kick it off!
 
 async function check(): Promise<void> {
@@ -63,6 +70,7 @@ async function connect(): Promise<void> {
 		await api.connectWebSocket(async (message: WebSocketMessage) => {
 			if (message.type === "board") {
 				board = message.board;
+				render("Board received on web socket");
 			}
 		});
 		stateMachine.execute(Event.Connected);
@@ -93,8 +101,11 @@ function renderStatusText(text: string) {
 	return <div className="status-text"><h1>{text}</h1></div>;
 }
 
-function render() {
+
+function render(cause: string) {
 	let domNode: React.ReactNode;
+
+	showCause(stateMachine.currentState, cause);
 
 	switch (stateMachine.currentState) {
 		case State.Start:
@@ -120,7 +131,10 @@ function render() {
 			domNode = (
 				// <React.StrictMode>
 					<ApiContext.Provider value={api}>
-						<App board={board} boardUpdated={newBoard => board = newBoard}/>
+						<App board={board} boardUpdated={newBoard => {
+							board = newBoard;
+							render("Application changed the board")
+						}}/>
 					</ApiContext.Provider>
 				// </React.StrictMode>
 			);
