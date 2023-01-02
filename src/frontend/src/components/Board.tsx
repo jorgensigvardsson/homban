@@ -42,44 +42,52 @@ export const Board = (props: Props) => {
 	const inProgressTasks = board.inProgressLaneTasks.map(tid => ({id: tid, ...board.tasks[tid] }));
 	const doneTasks = board.doneLaneTasks.map(tid => ({id: tid, ...board.tasks[tid] }));
 
+	const droppableStyle = (isDraggingOver: boolean) => {
+		return {
+			backgroundColor: isDraggingOver ? '#e0e0e080' : 'transparent'
+		}
+	}
+
 	return (
 		<DragDropContext onDragEnd={(r, p) => onDragEnd(r, p)}>
-			<div className="BoardTitle">
-				<div className="LaneTitle">Ready</div>
-				<div className="LaneTitle">In Progress</div>
-				<div className="LaneTitle">Done</div>
-			</div>
-			<div className="Board">
-				<Droppable droppableId="ready">
-					{(provided, snapshot) => (
-						<div ref={provided.innerRef}
-						     style={{ backgroundColor: snapshot.isDraggingOver ? '#e0e0e0' : '#f0f0f0' }}
-						     {...provided.droppableProps}>
-							<BoardLane tasks={readyTasks} lane={Lane.Ready} />
-							{provided.placeholder}
-						</div>
-					)}
-				</Droppable>
-				<Droppable droppableId="in-progress">
-					{(provided, snapshot) => (
-						<div ref={provided.innerRef}
-						     style={{ backgroundColor: snapshot.isDraggingOver ? '#e0e0e0' : '#f0f0f0' }}
-						     {...provided.droppableProps}>
-							<BoardLane tasks={inProgressTasks} lane={Lane.InProgress} />
-							{provided.placeholder}
-						</div>
-					)}
-				</Droppable>
-				<Droppable droppableId="done">
-					{(provided, snapshot) => (
-						<div ref={provided.innerRef}
-						     style={{ backgroundColor: snapshot.isDraggingOver ? '#e0e0e0' : '#f0f0f0' }}
-						     {...provided.droppableProps}>
-							<BoardLane tasks={doneTasks} lane={Lane.Done} />
-							{provided.placeholder}
-						</div>
-					)}
-				</Droppable>
+			<div className="BoardContainer">
+				<div className="BoardTitle">
+					<div className="LaneTitle">Ready</div>
+					<div className="LaneTitle">In Progress</div>
+					<div className="LaneTitle">Done</div>
+				</div>
+				<div className="Board">
+					<Droppable droppableId="ready">
+						{(provided, snapshot) => (
+							<div ref={provided.innerRef}
+								style={droppableStyle(snapshot.isDraggingOver)}
+								{...provided.droppableProps}>
+								<BoardLane tasks={readyTasks} lane={Lane.Ready} />
+								{provided.placeholder}
+							</div>
+						)}
+					</Droppable>
+					<Droppable droppableId="in-progress">
+						{(provided, snapshot) => (
+							<div ref={provided.innerRef}
+								style={droppableStyle(snapshot.isDraggingOver)}
+								{...provided.droppableProps}>
+								<BoardLane tasks={inProgressTasks} lane={Lane.InProgress} />
+								{provided.placeholder}
+							</div>
+						)}
+					</Droppable>
+					<Droppable droppableId="done">
+						{(provided, snapshot) => (
+							<div ref={provided.innerRef}
+								style={droppableStyle(snapshot.isDraggingOver)}
+								{...provided.droppableProps}>
+								<BoardLane tasks={doneTasks} lane={Lane.Done} />
+								{provided.placeholder}
+							</div>
+						)}
+					</Droppable>
+				</div>
 			</div>
 		</DragDropContext>
 	)

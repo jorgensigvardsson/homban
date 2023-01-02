@@ -6,6 +6,15 @@
 	overflow-y: auto;
 }
 
+.BoardContainer {
+	background-image: url("../static/backdrop.jpg");
+	background-repeat: no-repeat;
+	background-attachment: scroll;
+	background-color: transparent;
+	background-size: cover;
+	background-position: center;
+}
+
 .BoardTitle {
 	display: grid;
 	grid-template-columns: 1fr 1fr 1fr;
@@ -17,5 +26,5 @@
 	font-weight: bold;
 	display: flex;
 	justify-content: center;
-	background-color: lightgray;
+	background-color: rgba(211, 211, 211, 0.6)
 }

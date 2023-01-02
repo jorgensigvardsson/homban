@@ -37,8 +37,8 @@ const App = (props: Props) => {
 	}
 
 	return (
-		<>
-			{board && <Tabs>
+		<div className="App">
+			{board && <Tabs style={{backgroundColor: "rgba(255, 255, 255, 0.5)"}}>
 				<Tab eventKey="board" title="Board">
 					<Board board={board} onTaskDrop={onTaskDrop}/>
 				</Tab>
@@ -47,8 +47,7 @@ const App = (props: Props) => {
 					<BoardAdmin board={board} onBoardUpdated={newBoard => boardUpdated(newBoard)}/>
 				</Tab>
 			</Tabs>}
-			{!board && <div>Loading data...</div>}
-		</>
+		</div>
 	);
 }
 
