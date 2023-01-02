@@ -18,11 +18,12 @@ public class InactiveTaskScheduler : IInactiveTaskScheduler
                     return ots.When;
                 break;
             case PeriodicScheduleFollowingActivity fa:
-                if (task.LastMovedOffTheBoardTime != null)
-                    return fa.Period.AddToDate(task.LastMovedOffTheBoardTime.Value);
-                break;
+                if (task.LastMovedOffTheBoardTime == null || task.LastMovedOffTheBoardTime.Value < fa.Start)
+                    return fa.Start;
+
+                return fa.Period.AddToDate(task.LastMovedOffTheBoardTime.Value);
             case PeriodicScheduleFollowingCalendar fc:
-                return fc.Period.AddToDate(task.LastMovedOnToBoardTime);
+                return fc.Period.AddToDate(task.LastMovedOnToBoardTime > fc.Start ? task.LastMovedOnToBoardTime : fc.Start);
             default:
                 throw new ApplicationException($"Unknown schedule: {task.Schedule.GetType().Name}");
         }

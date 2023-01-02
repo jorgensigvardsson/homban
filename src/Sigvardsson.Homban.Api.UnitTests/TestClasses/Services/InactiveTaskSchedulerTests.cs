@@ -23,9 +23,9 @@ public class InactiveTaskSchedulerTests : TestBase<InactiveTaskScheduler>
             })
         );
     }
-    
+   
     [Fact]
-    public void OneTimeSchedule_OneTimeSchedule_HasNeverBeenMovedOffTheBoard()
+    public void OneTimeSchedule_HasNeverBeenMovedOffTheBoard()
     {
         // Arrange
         var when = CreateSpecimen<DateTimeOffset>();
@@ -45,7 +45,7 @@ public class InactiveTaskSchedulerTests : TestBase<InactiveTaskScheduler>
     }
     
     [Fact]
-    public void OneTimeSchedule_OneTimeSchedule_HasBeenMovedOffTheBoard()
+    public void OneTimeSchedule_HasBeenMovedOffTheBoard()
     {
         // Arrange
         var when = CreateSpecimen<DateTimeOffset>();
@@ -65,58 +65,37 @@ public class InactiveTaskSchedulerTests : TestBase<InactiveTaskScheduler>
     }
     
     [Fact]
-    public void OneTimeSchedule_PeriodicScheduleFollowingActivity_HasBeenMovedOffTheBoard()
+    public void PeriodicScheduleFollowingCalendar_LastMoveOnToBoardIsBeforeStartPeriod()
     {
         // Arrange
-        var start = CreateSpecimen<DateTimeOffset>();
-        var period = CreateSpecimen<Duration>();
-        var now = CreateSpecimen<DateTimeOffset>();
-        var task = CreateSpecimen<Task>() with
-        {
-            Schedule = new PeriodicScheduleFollowingActivity(start, period),
-            LastMovedOffTheBoardTime = CreateSpecimen<DateTimeOffset>()
-        };
-
-        // Act
-        var sut = new InactiveTaskScheduler();
-        var result = sut.ScheduleReady(task, now);
-
-        // Assert
-        result.ShouldBe(period.AddToDate(task.LastMovedOffTheBoardTime.Value));
-    }
-    
-    [Fact]
-    public void OneTimeSchedule_PeriodicScheduleFollowingActivity_HasNotBeenMovedOffTheBoard()
-    {
-        // Arrange
-        var start = CreateSpecimen<DateTimeOffset>();
-        var period = CreateSpecimen<Duration>();
-        var now = CreateSpecimen<DateTimeOffset>();
-        var task = CreateSpecimen<Task>() with
-        {
-            Schedule = new PeriodicScheduleFollowingActivity(start, period),
-            LastMovedOffTheBoardTime = null
-        };
-
-        // Act
-        var sut = new InactiveTaskScheduler();
-        var result = sut.ScheduleReady(task, now);
-
-        // Assert
-        result.ShouldBeNull();
-    }
-    
-    [Fact]
-    public void OneTimeSchedule_PeriodicScheduleFollowingCalendar()
-    {
-        // Arrange
-        var start = CreateSpecimen<DateTimeOffset>();
-        var period = CreateSpecimen<Duration>();
+        var start = DateTimeOffset.Parse("2023-01-03T00:00:00+00:00");
+        var period = Duration.Parse("1q");
         var now = CreateSpecimen<DateTimeOffset>();
         var task = CreateSpecimen<Task>() with
         {
             Schedule = new PeriodicScheduleFollowingCalendar(start, period),
-            LastMovedOnToBoardTime = CreateSpecimen<DateTimeOffset>()
+            LastMovedOnToBoardTime = start - TimeSpan.FromDays(1)
+        };
+
+        // Act
+        var sut = new InactiveTaskScheduler();
+        var result = sut.ScheduleReady(task, now);
+
+        // Assert
+        result.ShouldBe(period.AddToDate(start));
+    }
+    
+    [Fact]
+    public void PeriodicScheduleFollowingCalendar_LastMoveOnToBoardIsAfterStartPeriod()
+    {
+        // Arrange
+        var start = DateTimeOffset.Parse("2023-01-03T00:00:00+00:00");
+        var period = Duration.Parse("1q");
+        var now = CreateSpecimen<DateTimeOffset>();
+        var task = CreateSpecimen<Task>() with
+        {
+            Schedule = new PeriodicScheduleFollowingCalendar(start, period),
+            LastMovedOnToBoardTime = start + TimeSpan.FromDays(1)
         };
 
         // Act
@@ -125,5 +104,68 @@ public class InactiveTaskSchedulerTests : TestBase<InactiveTaskScheduler>
 
         // Assert
         result.ShouldBe(period.AddToDate(task.LastMovedOnToBoardTime));
+    }
+    
+    [Fact]
+    public void PeriodicScheduleFollowingActivity_NeverBeenMovedOffTheBoard()
+    {
+        // Arrange
+        var start = DateTimeOffset.Parse("2023-01-03T00:00:00+00:00");
+        var period = Duration.Parse("1q");
+        var task = CreateSpecimen<Task>() with
+        {
+            Schedule = new PeriodicScheduleFollowingActivity(start, period),
+            LastMovedOffTheBoardTime = null
+        };
+        var now = DateTimeOffset.Parse("2023-01-01T21:42:49.522254+00:00");
+
+        // Act
+        var sut = CreateSut();
+        var newTime = sut.ScheduleReady(task, now);
+
+        // Assert
+        newTime.ShouldBe(start);
+    }
+    
+    [Fact]
+    public void PeriodicScheduleFollowingActivity_HasBeenMovedOffTheBoardPreviouslyButBeforeStartPeriod()
+    {
+        // Arrange
+        var start = DateTimeOffset.Parse("2023-01-03T00:00:00+00:00");
+        var period = Duration.Parse("1q");
+        var task = CreateSpecimen<Task>() with
+        {
+            Schedule = new PeriodicScheduleFollowingActivity(start, period),
+            LastMovedOffTheBoardTime = start - TimeSpan.FromDays(1)
+        };
+        var now = DateTimeOffset.Parse("2023-01-01T21:42:49.522254+00:00");
+
+        // Act
+        var sut = CreateSut();
+        var newTime = sut.ScheduleReady(task, now);
+
+        // Assert
+        newTime.ShouldBe(start);
+    }
+    
+    [Fact]
+    public void PeriodicScheduleFollowingActivity_HasBeenMovedOffTheBoardPreviouslyButAfterStartPeriod()
+    {
+        // Arrange
+        var start = DateTimeOffset.Parse("2023-01-03T00:00:00+00:00");
+        var period = Duration.Parse("1q");
+        var task = CreateSpecimen<Task>() with
+        {
+            Schedule = new PeriodicScheduleFollowingActivity(start, period),
+            LastMovedOffTheBoardTime = start + TimeSpan.FromDays(1)
+        };
+        var now = DateTimeOffset.Parse("2023-01-01T21:42:49.522254+00:00");
+
+        // Act
+        var sut = CreateSut();
+        var newTime = sut.ScheduleReady(task, now);
+
+        // Assert
+        newTime.ShouldBe(period.AddToDate(start + TimeSpan.FromDays(1)));
     }
 }

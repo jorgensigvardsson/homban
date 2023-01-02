@@ -36,8 +36,8 @@ public record Duration(int Years, int HalfYears, int Quarters, int Months, int W
                                                                           .AddMinutes(Minutes)
                                                                           .AddHours(Hours)
                                                                           .AddDays(Days + Weeks * 7)
-                                                                          .AddMonths(Months)
-                                                                          .AddYears(Years + Quarters / 4 + HalfYears / 2);
+                                                                          .AddMonths(Months + Quarters * 3 + HalfYears * 6)
+                                                                          .AddYears(Years);
 
     public TimeSpan AsTimeSpan(DateTimeOffset reference) => AddToDate(reference) - reference;
 
