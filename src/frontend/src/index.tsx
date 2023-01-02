@@ -4,76 +4,134 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { ApiContext, ApiImplementation } from './api';
+import { ApiContext, ApiImplementation, WebSocketMessage } from './api';
 import Login from './Login';
+import { State, Event, StateMachine } from './app-state';
+import { delay } from './delay';
+import { Board } from './models/board';
 
 const root = ReactDOM.createRoot(
 	document.getElementById('root') as HTMLElement
 );
 
-const api = new ApiImplementation();
-
-let isAuthenticated: boolean | null = null;
-
-const render = () => {
-	let domNode: React.ReactNode;
-
-	if (isAuthenticated === null) {
-		domNode = <div className="status-text"><h1>Validating authentication...</h1></div>
-	} else if(isAuthenticated === false) {
-		domNode = (
-			// <React.StrictMode>
-				<ApiContext.Provider value={api}>
-					<Login onLoggedIn={() => {
-						isAuthenticated = true;
-						setupTokenRenewal();
-						render();
-					}}/>
-				</ApiContext.Provider>
-			// </React.StrictMode>
-		)
-	} else {
-		domNode = (
-			// <React.StrictMode>
-				<ApiContext.Provider value={api}>
-					<App />
-				</ApiContext.Provider>
-			// </React.StrictMode>
-		);
-	}
-	root.render(domNode);
-}
-
-render();
-
-const authPromise = api.checkAuth();
-
-(async () => {
-	isAuthenticated = await authPromise;
-	setupTokenRenewal();
-	render();
-})();
-
 let tokenRenewalTimerId: number | null = null;
 const ONE_HOUR_INTERVAL = 1000 /* ms -> s */ * 60 /* s -> min */ * 60 /* min -> h */;
 
-// Refresh token once every hour
-function setupTokenRenewal() {
-	if (isAuthenticated === false) {
-		if (tokenRenewalTimerId !== null)
-			window.clearInterval(tokenRenewalTimerId);
-		tokenRenewalTimerId = null;
-	} else if(isAuthenticated === true) {
-		if (tokenRenewalTimerId === null)
-			tokenRenewalTimerId = window.setInterval(renewToken, ONE_HOUR_INTERVAL); // 1 hour intervals
+const api = new ApiImplementation();
+let board: Board | null = null;
+
+const stateMachine = new StateMachine();
+stateMachine.currentState = State.Start;
+stateMachine.addTransition(State.Start, Event.Check, State.Checking, () => check());
+stateMachine.addTransition(State.Checking, Event.AuthNotOk, State.WantCredentials, () => authNotOk());
+stateMachine.addTransition(State.Checking, Event.Connect, State.Connecting, () => connect());
+stateMachine.addTransition(State.Connecting, Event.Connected, State.FetchingBoard, () => connected());
+stateMachine.addTransition(State.FetchingBoard, Event.BoardFetched, State.Running, () => boardFetched());
+stateMachine.addTransition(State.Connecting, Event.Check, State.Checking, () => check());
+stateMachine.addTransition(State.WantCredentials, Event.Connect, State.Connecting, () => connect());
+stateMachine.addTransition(State.Running, Event.Reconnect, State.Checking, () => check());
+stateMachine.addTransition(State.FetchingBoard, Event.Reconnect, State.Checking, () => check());
+
+stateMachine.stateChangedObserver = () => render();
+stateMachine.execute(Event.Check); // Kick it off!
+
+async function check(): Promise<void> {
+	if (tokenRenewalTimerId !== null)
+		window.clearInterval(tokenRenewalTimerId);
+	tokenRenewalTimerId = null;
+
+	let retry = false;
+	do {
+		try {
+			const isAuthenticated = await api.checkAuth();
+			if (isAuthenticated) {
+				stateMachine.execute(Event.Connect);
+			} else {
+				stateMachine.execute(Event.AuthNotOk);
+			}
+			return;
+		} catch(err) {
+			console.error("Failed to check authentication", err);
+			await delay(5000);
+			retry = true;
+		}
+	} while(retry);
+}
+
+async function connect(): Promise<void> {
+	try {
+		await api.connectWebSocket(async (message: WebSocketMessage) => {
+			if (message.type === "board") {
+				board = message.board;
+			}
+		});
+		stateMachine.execute(Event.Connected);
+	} catch (err) {
+		console.error("Failed to connect web socket", err);
+		stateMachine.execute(Event.Check);
 	}
+}
+
+async function authNotOk(): Promise<void> {
+}
+
+async function connected(): Promise<void> {
+	try {
+		board = await api.getBoard();
+		stateMachine.execute(Event.BoardFetched);
+	} catch (err) {
+		console.error("Failed to get board", err);
+		stateMachine.execute(Event.Reconnect);
+	}
+}
+
+async function boardFetched(): Promise<void> {
+	tokenRenewalTimerId = window.setInterval(renewToken, ONE_HOUR_INTERVAL); // 1 hour intervals
+}
+
+function renderStatusText(text: string) {
+	return <div className="status-text"><h1>{text}</h1></div>;
+}
+
+function render() {
+	let domNode: React.ReactNode;
+
+	switch (stateMachine.currentState) {
+		case State.Start:
+		case State.Checking:
+			domNode = renderStatusText("Validating authentication...");
+			break;
+		case State.Connecting:
+			domNode = renderStatusText("Connecting web socket...");
+			break;
+		case State.FetchingBoard:
+			domNode = renderStatusText("Loading board...");
+			break;
+		case State.WantCredentials:
+			domNode = (
+				// <React.StrictMode>
+					<ApiContext.Provider value={api}>
+						<Login onLoggedIn={() => stateMachine.execute(Event.Connect)}/>
+					</ApiContext.Provider>
+				// </React.StrictMode>
+			)
+			break;
+		case State.Running:
+			domNode = (
+				// <React.StrictMode>
+					<ApiContext.Provider value={api}>
+						<App board={board} boardUpdated={newBoard => board = newBoard}/>
+					</ApiContext.Provider>
+				// </React.StrictMode>
+			);
+	}
+
+	root.render(domNode);
 }
 
 async function renewToken() {
 	if (!await api.renewToken()) {
-		isAuthenticated = false;
-		setupTokenRenewal();
-		render();
+		stateMachine.execute(Event.Reconnect);
 	}
 }
 
@@ -87,19 +145,19 @@ async function renewToken() {
 // Refresh page as needed!
 if ('onresume' in document) {
 	document.addEventListener('resume', () => {
-		document.location.reload();
+		stateMachine.execute(Event.Reconnect);
 	})
 } else {
 	document.addEventListener('visibilitychange', e => {
 		if (document.visibilityState === 'visible') {
 			if (!api.isWebSocketAlive)
-				document.location.reload();
+				stateMachine.execute(Event.Reconnect);
 		}
 	})
 }
 
 api.webSocketDied = () => {
-	document.location.reload();
+	stateMachine.execute(Event.Reconnect);
 }
 
 // If you want to start measuring performance in your app, pass a function

@@ -1,38 +1,19 @@
-import { useEffect, useState } from 'react';
 import './App.css';
 import { Board } from './components/Board';
 import BoardAdmin from './components/BoardAdmin';
 import { Board as BoardModel, Lane, Task } from './models/board';
 import Tabs from 'react-bootstrap/Tabs';
 import Tab from 'react-bootstrap/Tab';
-import { Api, WebSocketMessage, withApi } from './api';
+import { Api, withApi } from './api';
 
 interface Props {
 	api: Api;
+	board: BoardModel | null;
+	boardUpdated: (board: BoardModel) => void;
 }
 
 const App = (props: Props) => {
-	const { api } = props;
-
-	const [board, setBoard] = useState<BoardModel | null>(null);
-
-	useEffect(() => {
-		const fetchData = async () => {
-			try {
-				const newBoard = await api.getBoard();
-				setBoard(p => newBoard);
-			} catch (err: any) {
-				alert(err.message);
-			}
-		}
-
-		fetchData();
-		api.connectWebSocket(async (message: WebSocketMessage) => {
-			if (message.type === "board") {
-				setBoard(() => message.board);
-			}
-		});
-	}, [api]);
+	const { api, boardUpdated, board } = props;
 
 
 	const onTaskDrop = async (board: BoardModel, taskId: string, task: Task, lane: Lane, index: number) => {
@@ -43,7 +24,7 @@ const App = (props: Props) => {
 				if (!newBoard)
 					return;
 
-				setBoard(newBoard);
+				boardUpdated(newBoard);
 			} catch(error) {
 				console.error("Failed to move task in internal state. ", error);
 			}
@@ -63,7 +44,7 @@ const App = (props: Props) => {
 				</Tab>
 
 				<Tab eventKey="admin" title="Admin">
-					<BoardAdmin board={board} onBoardUpdated={newBoard => setBoard(newBoard)}/>
+					<BoardAdmin board={board} onBoardUpdated={newBoard => boardUpdated(newBoard)}/>
 				</Tab>
 			</Tabs>}
 			{!board && <div>Loading data...</div>}

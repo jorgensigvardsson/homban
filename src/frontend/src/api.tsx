@@ -10,7 +10,7 @@ export interface Api {
 	updateTask(taskId: string, task: TaskData): Promise<BoardAndTask>;
 	createTask(task: TaskData): Promise<BoardAndTask>;
 	deleteTask(taskId: string): Promise<Board>;
-	connectWebSocket(callback: (message: WebSocketMessage) => Promise<void>): void;
+	connectWebSocket(callback: (message: WebSocketMessage) => Promise<void>): Promise<void>;
 	checkAuth(): Promise<boolean>;
 	login(username: string, password: string): Promise<boolean>;
 	renewToken(): Promise<boolean>;
@@ -157,62 +157,67 @@ export class ApiImplementation implements Api {
 		}
 	}
 
-	connectWebSocket(callback: (message: WebSocketMessage) => Promise<void>): void {
+	async connectWebSocket(callback: (message: WebSocketMessage) => Promise<void>): Promise<void> {
 		if (!token)
 			throw new Error("No authentication performed. Quitting.");
 
 		if (this.webSocket && this.webSocket.readyState === WebSocket.OPEN)
 			return;
 
-		try {
-			this.webSocket = new WebSocket(baseWebSocketAddress("web-socket", token));
-			this.webSocket.onopen = () => {
-				this.intervalHandle = window.setInterval(() => {
-					this.pingWebSocket();
-				}, PingInterval);
-			}
-			this.webSocket.onmessage = (evt: MessageEvent) => {
-				const obj = JSON.parse(evt.data);
+		const tokenAtCallTime = token;
+		return new Promise((resolve, reject) => {
+			try {
+				this.webSocket = new WebSocket(baseWebSocketAddress("web-socket", tokenAtCallTime));
+				this.webSocket.onopen = () => {
+					resolve();
+					this.intervalHandle = window.setInterval(() => {
+						this.pingWebSocket();
+					}, PingInterval);
+				}
+				this.webSocket.onmessage = (evt: MessageEvent) => {
+					const obj = JSON.parse(evt.data);
 
-				if ("type" in obj) {
-					switch(obj.type) {
-						case "board":
-							callback({
-								type: "board",
-								board: boardToModel(obj.payload)
-							})
-							break;
-						case "pong":
-							// We sent a ping earlier, server responded with pong!
-							break;
+					if ("type" in obj) {
+						switch(obj.type) {
+							case "board":
+								callback({
+									type: "board",
+									board: boardToModel(obj.payload)
+								})
+								break;
+							case "pong":
+								// We sent a ping earlier, server responded with pong!
+								break;
+						}
+					} else {
+						console.error("Unknown WS message received");
 					}
-				} else {
-					console.error("Unknown WS message received");
-				}
-			}
-
-			this.webSocket.onerror = () => {
-				if (this.intervalHandle !== null) {
-					window.clearInterval(this.intervalHandle);
-					this.intervalHandle = null;
 				}
 
-				if (this.webSocketDiedHandler)
-					this.webSocketDiedHandler();
-			}
+				this.webSocket.onerror = () => {
+					if (this.intervalHandle !== null) {
+						window.clearInterval(this.intervalHandle);
+						this.intervalHandle = null;
+					}
 
-			this.webSocket.onclose = () => {
-				if (this.intervalHandle !== null) {
-					window.clearInterval(this.intervalHandle);
-					this.intervalHandle = null;
+					if (this.webSocketDiedHandler)
+						this.webSocketDiedHandler();
 				}
 
-				if (this.webSocketDiedHandler)
-					this.webSocketDiedHandler();
+				this.webSocket.onclose = () => {
+					if (this.intervalHandle !== null) {
+						window.clearInterval(this.intervalHandle);
+						this.intervalHandle = null;
+					}
+
+					if (this.webSocketDiedHandler)
+						this.webSocketDiedHandler();
+				}
+			} catch (error) {
+				console.error(error);
+				reject(error);
 			}
-		} catch (error) {
-			console.error(error);
-		}
+		})
 	}
 
 	private pingWebSocket(): void {
