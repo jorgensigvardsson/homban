@@ -152,7 +152,7 @@ public class InactiveTaskSchedulerTests : TestBase<InactiveTaskScheduler>
     public void PeriodicScheduleFollowingActivity_HasBeenMovedOffTheBoardPreviouslyButAfterStartPeriod()
     {
         // Arrange
-        var start = DateTimeOffset.Parse("2023-01-03T00:00:00+00:00");
+        var start = DateTimeOffset.Parse("2023-01-03T01:01:01+00:00");
         var period = Duration.Parse("1q");
         var task = CreateSpecimen<Task>() with
         {
@@ -166,6 +166,11 @@ public class InactiveTaskSchedulerTests : TestBase<InactiveTaskScheduler>
         var newTime = sut.ScheduleReady(task, now);
 
         // Assert
-        newTime.ShouldBe(period.AddToDate(start + TimeSpan.FromDays(1)));
+        newTime.ShouldBe(MidnightOf(period.AddToDate(start + TimeSpan.FromDays(1))));
+    }
+    
+    private DateTimeOffset MidnightOf(DateTimeOffset time)
+    {
+        return new DateTimeOffset(year: time.Year, month: time.Month, day: time.Day, hour: 0, minute: 0, second: 0, time.Offset);
     }
 }

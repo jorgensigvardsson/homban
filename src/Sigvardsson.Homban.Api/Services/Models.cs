@@ -32,6 +32,8 @@ public record Duration(int Years, int HalfYears, int Quarters, int Months, int W
     public readonly int Minutes = Minutes;
     public readonly int Seconds = Seconds;
 
+    public bool HasTimePart => Hours > 0 || Minutes > 0 || Seconds > 0;
+
     public DateTimeOffset AddToDate(DateTimeOffset reference) => reference.AddSeconds(Seconds)
                                                                           .AddMinutes(Minutes)
                                                                           .AddHours(Hours)
@@ -43,7 +45,6 @@ public record Duration(int Years, int HalfYears, int Quarters, int Months, int W
 
     private static readonly Regex s_regex = new(@"^((?<years>\d+)\s*y(ear(s)?)?)?\s*((?<halfYears>\d+)\s*ha(lfyear(s)?)?)?\s*((?<quarters>\d+)\s*q(uarter(s)?)?)?\s*((?<months>\d+)\s*mo(nth(s)?)?)?\s*((?<weeks>\d+)\s*w(eek(s)?)?)?\s*((?<days>\d+)\s*d(ay(s)?)?)?\s*((?<hours>\d+)\s*h(our(s)?)?)?\s*((?<minutes>\d+)\s*m(inute(s)?)?)?\s*((?<seconds>\d+)\s*s(econd(s)?)?)?\s*$",
                                                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
-    // //
     public static Duration Parse(string text)
     {
         if (!TryParse(text, out var duration))
