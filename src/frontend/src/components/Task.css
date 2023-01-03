@@ -45,3 +45,8 @@
 .task .title {
 	font-weight: bolder;
 }
+
+.task.dragging {
+	box-shadow:
+    0 0 10px 5px rgb(186, 216, 255)  /* inner white */
+}

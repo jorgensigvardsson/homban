@@ -6,6 +6,7 @@ import { Duration, isBiDaily, isBiMonthly, isBiWeekly, isDaily, isHalfYearly, is
 interface Props {
 	task: TaskModel;
 	lane: Lane;
+	isDragging: boolean;
 }
 
 export function pillPeriodicText(period: Duration) {
@@ -52,7 +53,7 @@ function generateMarkup(text: string) {
 }
 
 export const Task = (props: Props) => {
-	const { task, lane } = props;
+	const { task, lane, isDragging } = props;
 
 	const shortDescriptionLength = 40;
 	const isLongDescription = task.description.length > shortDescriptionLength;
@@ -61,7 +62,7 @@ export const Task = (props: Props) => {
 	const [showFullDescription, setShowFullDescription] = useState(false);
 
 	return (
-		<div className={`task ${lane}`} onDoubleClick={() => setShowFullDescription(!showFullDescription)} >
+		<div className={`task ${lane}${isDragging ? ' dragging' : ''}`} onDoubleClick={() => setShowFullDescription(!showFullDescription)} >
 			<div className="content">
 				<div>
 					<div className="title">{task.title}</div>
