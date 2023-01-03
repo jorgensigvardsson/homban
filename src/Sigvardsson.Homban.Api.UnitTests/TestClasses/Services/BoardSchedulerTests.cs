@@ -75,13 +75,13 @@ public class BoardSchedulerTests : TestBase<BoardScheduler>
     }
     
     [Fact]
-    public async ThreadTask ServiceWaitsForTheNextTaskToBeScheduled_DoneTaskIsMovedToInactiveAfterTimeBasedOnLastChange()
+    public async ThreadTask ServiceWaitsForTheNextTaskToBeScheduled_DoneTaskIsMovedToInactiveAfterMidnight()
     {
         // Arrange
         using var cts = new CancellationTokenSource();
 
         var now = m_fixture.Create<DateTimeOffset>();
-        var then = now + TimeSpan.FromHours(2);
+        var then = new DateTimeOffset(year: now.Year, month: now.Month, day: now.Day, hour: 0, minute: 0, second: 0, now.Offset).AddDays(1);
         var lastChange = now - TimeSpan.FromMinutes(1);
         var taskId = m_fixture.Create<Guid>();
         var task = m_fixture.Create<IdentifiedTask>() with {LastChange = lastChange};
@@ -100,7 +100,7 @@ public class BoardSchedulerTests : TestBase<BoardScheduler>
         m_clock.Setup(m => m.Now)
                .Returns(() => hasSlept ? then : now);
 
-        m_threadControl.Setup(m => m.Delay(TimeSpan.FromHours(2) - TimeSpan.FromMinutes(1), It.IsAny<CancellationToken>()))
+        m_threadControl.Setup(m => m.Delay(then - now, It.IsAny<CancellationToken>()))
                        .Callback(() => hasSlept = true)
                        .Returns(ThreadTask.CompletedTask);
 
@@ -113,7 +113,7 @@ public class BoardSchedulerTests : TestBase<BoardScheduler>
         await sut.StartAsync(cts.Token);
 
         // Assert
-        m_threadControl.Verify(m => m.Delay(TimeSpan.FromHours(2) - TimeSpan.FromMinutes(1), It.IsAny<CancellationToken>()));
+        m_threadControl.Verify(m => m.Delay(then - now, It.IsAny<CancellationToken>()));
         m_boardService.Verify(m => m.MoveTask(taskId, Lane.Inactive, 0, It.IsAny<CancellationToken>()));
     }
     

@@ -16,7 +16,6 @@ public class BoardScheduler : BackgroundService
     private readonly IThreadControl m_threadControl;
     private readonly IClock m_clock;
     private readonly AsyncAutoResetEvent m_boardChangedEvent = new();
-    private static readonly TimeSpan s_durationInDoneColumn = TimeSpan.FromHours(2);
 
     public BoardScheduler(IBoardService boardService,
                           ILogger<BoardScheduler> logger,
@@ -43,7 +42,7 @@ public class BoardScheduler : BackgroundService
                 var sleepDuration = CalculateSleep(board, m_clock.Now);
                
                 boardChangedEventTask ??= m_boardChangedEvent.WaitAsync(stoppingToken);
-                
+
                 var expiredTask = await ThreadTask.WhenAny(
                     m_threadControl.Delay(sleepDuration.TotalMilliseconds > 4294967294 ? TimeSpan.FromMilliseconds(4294967294) : sleepDuration, stoppingToken),
                     boardChangedEventTask
@@ -82,7 +81,7 @@ public class BoardScheduler : BackgroundService
         // Tasks that have been in the state "done" long enough are moved to inactive state
         foreach (var taskId in board.DoneLaneTasks)
         {
-            if (board.Tasks[taskId].LastChange + s_durationInDoneColumn <= now)
+            if (NextDayOf(board.Tasks[taskId].LastChange) <= now)
                 await m_boardService.MoveTask(taskId, Lane.Inactive, 0, cancellationToken);
         }
         
@@ -94,6 +93,11 @@ public class BoardScheduler : BackgroundService
         }
     }
 
+    private DateTimeOffset NextDayOf(DateTimeOffset time)
+    {
+        return new DateTimeOffset(year: time.Year, month: time.Month, day: time.Day, hour: 0, minute: 0, second: 0, time.Offset).AddDays(1);
+    }
+
     private TimeSpan CalculateSleep(Board board, DateTimeOffset now)
     {
         DateTimeOffset? nextTime = null;
@@ -101,8 +105,8 @@ public class BoardScheduler : BackgroundService
         foreach (var taskId in board.DoneLaneTasks)
         {
             var task = board.Tasks[taskId];
-            if (nextTime == null || task.LastChange + s_durationInDoneColumn < nextTime)
-                nextTime = task.LastChange + s_durationInDoneColumn;
+            if (nextTime == null || NextDayOf(task.LastChange) < nextTime)
+                nextTime = NextDayOf(task.LastChange);
         }
         
         foreach (var taskId in board.InactiveLaneTasks)
