@@ -44,7 +44,7 @@ export const Board = (props: Props) => {
 
 	const droppableStyle = (isDraggingOver: boolean) => {
 		return {
-			backgroundColor: isDraggingOver ? '#e0e0e080' : 'transparent'
+			backgroundColor: isDraggingOver ? '#e0e0e040' : 'transparent'
 		}
 	}
 
