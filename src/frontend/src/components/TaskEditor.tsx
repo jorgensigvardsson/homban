@@ -1,5 +1,6 @@
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
+import { Lane } from '../models/board';
 import { TaskBeingEdited, TaskErrors } from './BoardAdmin';
 import { ScheduleEditor } from './ScheduleEditor';
 
@@ -13,10 +14,12 @@ interface Props {
 	onRevert: () => void;
 	isNew: boolean;
 	onCancel: () => void;
+	onActivate: () => void;
+	onDeactivate: () => void;
 }
 
 export const TaskEditor = (props: Props) => {
-	const { task, onTaskChanged, isDirty, onSave, errors, onDelete, onRevert, isNew, onCancel } = props;
+	const { task, onTaskChanged, isDirty, onSave, errors, onDelete, onRevert, isNew, onCancel, onActivate, onDeactivate } = props;
 
 	return (
 		<Form>
@@ -44,6 +47,8 @@ export const TaskEditor = (props: Props) => {
 				{isNew || <Button variant="danger" type="button" disabled={isDirty} onClick={() => onDelete()} style={{marginLeft: "0.5em"}}>Delete</Button>}
 				{isNew || <Button variant="warning" type="button" disabled={!isDirty} onClick={() => onRevert()} style={{marginLeft: "0.5em"}}>Revert</Button>}
 				{isNew && <Button variant="danger" type="button" onClick={() => onCancel()} style={{marginLeft: "0.5em"}}>Cancel</Button>}
+				{isNew || (!isDirty && task.lane !== undefined && task.lane === Lane.Inactive && <Button variant="outline-danger" type="button" onClick={() => onActivate()} style={{marginLeft: "0.5em"}}>Activate</Button>)}
+				{isNew || (!isDirty && task.lane !== undefined && task.lane !== Lane.Inactive && <Button variant="outline-danger" type="button" onClick={() => onDeactivate()} style={{marginLeft: "0.5em"}}>Deactivate</Button>)}
 			</Form.Group>
 		</Form>
 	)

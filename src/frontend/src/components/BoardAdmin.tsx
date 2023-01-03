@@ -1,4 +1,4 @@
-import { Board, IdentifiedTask, OneTimeSchedule, Task } from "../models/board"
+import { Board, IdentifiedTask, Lane, OneTimeSchedule, Task } from "../models/board"
 import { TaskEditor } from "./TaskEditor"
 import './BoardAdmin.css'
 import { TaskList } from "./TaskList"
@@ -24,6 +24,7 @@ export interface TaskBeingEdited {
 	readonly period?: string;
 	readonly start?: string;
 	readonly when?: string;
+	readonly lane?: Lane;
 }
 
 export type TaskErrors = {
@@ -58,7 +59,7 @@ export const BoardAdmin = (props: Props) => {
 			}
 		}
 		setSelectedTask(task);
-		setEditedTask(makeEditable(task));
+		setEditedTask(makeEditable(board, task.id, task));
 		setIsDirty(false);
 		setErrors({});
 	}
@@ -82,7 +83,7 @@ export const BoardAdmin = (props: Props) => {
 			return;
 
 		setSelectedTask(selectedTask);
-		setEditedTask(makeEditable(selectedTask));
+		setEditedTask(makeEditable(board, selectedTask.id, selectedTask));
 		setIsDirty(false);
 		setErrors({});
 	}
@@ -112,7 +113,7 @@ export const BoardAdmin = (props: Props) => {
 
 			onBoardUpdated(boardAndTask.board);
 			setSelectedTask(boardAndTask.task)
-			setEditedTask(makeEditable(boardAndTask.task));
+			setEditedTask(makeEditable(boardAndTask.board, boardAndTask.task.id, boardAndTask.task));
 			setIsDirty(false);
 			setErrors({});
 		} catch (error: any) {
@@ -136,13 +137,45 @@ export const BoardAdmin = (props: Props) => {
 			return;
 
 		setSelectedTask(null);
-		const newTaskData = makeEditable(selectedTask);
+		const newTaskData = makeEditable(board, selectedTask.id, selectedTask);
 		setEditedTask(newTaskData);
 		evaluateEditedTask(newTaskData);
 	}
 
 	const cancelNewTask = () => {
 		setEditedTask(null);
+	}
+
+	const activateTask = async () => {
+		if (!selectedTask)
+			return;
+
+		try {
+			const boardAndTask = await api.moveTask(selectedTask.id, Lane.Ready, 0);
+			onBoardUpdated(boardAndTask.board);
+			setSelectedTask(boardAndTask.task)
+			setEditedTask(makeEditable(boardAndTask.board, boardAndTask.task.id, boardAndTask.task));
+			setIsDirty(false);
+			setErrors({});
+		} catch (error: any) {
+			alert(`An error occurred: ${error.message}`)
+		}
+	}
+
+	const deactivateTask = async () => {
+		if (!selectedTask)
+			return;
+
+		try {
+			const boardAndTask = await api.moveTask(selectedTask.id, Lane.Inactive, 0);
+			onBoardUpdated(boardAndTask.board);
+			setSelectedTask(boardAndTask.task)
+			setEditedTask(makeEditable(boardAndTask.board, boardAndTask.task.id, boardAndTask.task));
+			setIsDirty(false);
+			setErrors({});
+		} catch (error: any) {
+			alert(`An error occurred: ${error.message}`)
+		}
 	}
 
 	const sortedTasks = [...Object.entries(board.tasks)].map(kvp => ({id: kvp[0], ...kvp[1]})).sort((a, b) => a.title.localeCompare(b.title))
@@ -174,7 +207,9 @@ export const BoardAdmin = (props: Props) => {
 											onDelete={() => deleteSelectedTask()}
 											onRevert={() => revertSelectedTask()}
 											onCancel={() => cancelNewTask()}
-											isNew={!selectedTask}/>}
+											isNew={!selectedTask}
+											onActivate={() => activateTask()}
+											onDeactivate={() => deactivateTask()}/>}
 				</Col>
 			</Row>
 		</Container>
@@ -243,14 +278,21 @@ const makeSchedule = (edited: TaskBeingEdited) => {
 	}
 }
 
-const makeEditable = (original: Task) => {
+const makeEditable = (board: Board, taskId: string, original: Task) => {
 	return {
 		title: original.title,
 		description: original.description,
 		scheduleType: original.schedule.type as string,
 		period: original.schedule.type !== "one-time" ? formatDuration(original.schedule.period) : undefined,
 		start: original.schedule.type !== "one-time" ? moment(original.schedule.start).format("yyyy-MM-DD") : undefined,
-		when: original.schedule.type === "one-time" ? moment(original.schedule.when).format("yyyy-MM-DD") : undefined
+		when: original.schedule.type === "one-time" ? moment(original.schedule.when).format("yyyy-MM-DD") : undefined,
+		lane: board.inProgressLaneTasks.indexOf(taskId) >= 0
+			? Lane.InProgress
+			: board.doneLaneTasks.indexOf(taskId) >= 0
+				? Lane.Done
+				: board.inactiveLaneTasks.indexOf(taskId) >= 0
+					? Lane.Inactive
+					: Lane.Ready
 	}
 }
 
