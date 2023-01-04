@@ -14,6 +14,7 @@ using Serilog.Sinks.Grafana.Loki;
 using Serilog.Sinks.SystemConsole.Themes;
 using Sigvardsson.Homban.Api.Controllers;
 using Sigvardsson.Homban.Api.Services;
+using Sigvardsson.Homban.Api.WebPush;
 
 namespace Sigvardsson.Homban.Api;
 
@@ -41,6 +42,11 @@ public static class Program
                 {
                     apiJsonSettings.CopyTo(o);
                 });
+
+        builder.Services
+               .AddPushSubscriptionStore(builder.Configuration)
+               .AddPushNotificationService(builder.Configuration)
+               .AddPushNotificationsQueue();
 
         var jwtSigningKey = Hash(builder.Configuration["JwtSigningKey"] ?? throw new ApplicationException("No JwtSigningKey configured."));
         var tokenValidationParameters = new TokenValidationParameters
@@ -117,8 +123,8 @@ public static class Program
         app.UseAuthentication();
         app.MapControllers();
         app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30)});
-
         app.UseSerilogRequestLogging();
+        app.UsePushSubscriptionStore();
 
         try
         {

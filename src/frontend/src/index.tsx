@@ -9,6 +9,7 @@ import Login from './Login';
 import { State, Event, StateMachine } from './app-state';
 import { delay } from './delay';
 import { Board } from './models/board';
+import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
 const root = ReactDOM.createRoot(
 	document.getElementById('root') as HTMLElement
@@ -101,6 +102,12 @@ function renderStatusText(text: string) {
 	return <div className="status-text"><h1>{text}</h1></div>;
 }
 
+const hasNotificationPermissions = () => Notification.permission === "granted" 
+
+const requestNotificationPermissions = async () => {
+	await Notification.requestPermission();
+	render("Notification permissions handled");
+}
 
 function render(cause: string) {
 	let domNode: React.ReactNode;
@@ -131,10 +138,12 @@ function render(cause: string) {
 			domNode = (
 				// <React.StrictMode>
 					<ApiContext.Provider value={api}>
-						<App board={board} boardUpdated={newBoard => {
-							board = newBoard;
-							render("Application changed the board")
-						}}/>
+						<App board={board} hasNotificationPermissions={hasNotificationPermissions()}
+						     requestNotificationPermissions={requestNotificationPermissions}
+						     boardUpdated={newBoard => {
+							 	board = newBoard;
+							 	render("Application changed the board")
+						     }}/>
 					</ApiContext.Provider>
 				// </React.StrictMode>
 			);
@@ -173,6 +182,11 @@ if ('onresume' in document) {
 api.webSocketDied = () => {
 	stateMachine.execute(Event.Reconnect);
 }
+
+// If you want your app to work offline and load faster, you can change
+// unregister() to register() below. Note this comes with some pitfalls.
+// Learn more about service workers: https://cra.link/PWA
+serviceWorkerRegistration.register();
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

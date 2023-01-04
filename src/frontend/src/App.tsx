@@ -10,10 +10,13 @@ interface Props {
 	api: Api;
 	board: BoardModel | null;
 	boardUpdated: (board: BoardModel) => void;
+	hasNotificationPermissions: boolean;
+	requestNotificationPermissions: () => void;
 }
 
 const App = (props: Props) => {
-	const { api, boardUpdated, board } = props;
+	const { api, boardUpdated, board, hasNotificationPermissions,
+	        requestNotificationPermissions } = props;
 
 
 	const onTaskDrop = async (board: BoardModel, taskId: string, task: Task, lane: Lane, index: number) => {
@@ -38,15 +41,22 @@ const App = (props: Props) => {
 
 	return (
 		<div className="App">
-			{board && <Tabs style={{backgroundColor: "rgba(255, 255, 255, 0.5)"}}>
-				<Tab eventKey="board" title="Board">
-					<Board board={board} onTaskDrop={onTaskDrop}/>
-				</Tab>
+			{board && 
+			<>
+				<Tabs style={{backgroundColor: "rgba(255, 255, 255, 0.5)"}}>
+					<Tab eventKey="board" title="Board">
+						<Board board={board} onTaskDrop={onTaskDrop}/>
+					</Tab>
 
-				<Tab eventKey="admin" title="Admin">
-					<BoardAdmin board={board} onBoardUpdated={newBoard => boardUpdated(newBoard)}/>
-				</Tab>
-			</Tabs>}
+					<Tab eventKey="admin" title="Admin">
+						<BoardAdmin board={board} onBoardUpdated={newBoard => boardUpdated(newBoard)}/>
+					</Tab>
+				</Tabs>
+				{hasNotificationPermissions || <div className="Status">
+					<a href="#" onClick={() => requestNotificationPermissions()}>Tillåt meddelanden</a>
+				</div>}
+			</>
+			}
 		</div>
 	);
 }

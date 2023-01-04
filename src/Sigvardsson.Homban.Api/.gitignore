@@ -1,2 +1,4 @@
 obj/
 bin/
+push-notifications.sqlitedb*
+Properties/launchSettings.json

@@ -1,4 +1,7 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:String x:Key="/Default/Environment/AssemblyExplorer/XmlDocument/@EntryValue">&lt;AssemblyExplorer&gt;
+  &lt;Assembly Path="/home/jorsi/.nuget/packages/lib.aspnetcore.webpush/2.2.0/lib/net6.0/Lib.AspNetCore.WebPush.dll" /&gt;
+&lt;/AssemblyExplorer&gt;</s:String>
 	<s:String x:Key="/Default/Environment/Highlighting/HighlightingSourceSnapshotLocation/@EntryValue">/home/jorsi/.cache/JetBrains/Rider2022.3/resharper-host/temp/Rider/vAny/CoverageData/_Sigvardsson.Homban.-441311859/Snapshot/snapshot.utdcvr</s:String>
 	
 	

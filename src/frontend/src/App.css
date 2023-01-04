@@ -1,0 +1,7 @@
+.App .Status {
+	position: fixed;
+	bottom: 1em;
+	right: 2em;
+	z-index: 100;
+	background-color: white;
+}

@@ -11,6 +11,7 @@ services:
       - Credentials__Password=${HOMBAN_PASSWORD}
       - JwtSigningKey=${HOMBAN_JWT_KEY}
       - LokiSink=${LOKI_SINK_ENDPOINT}
+      - PushServiceClient__PrivateKey=${VAPID_PRIVATE_KEY}
     volumes:
       - "${DATA_DIRECTORY}:/data"
   react:
