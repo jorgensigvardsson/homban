@@ -1,6 +1,8 @@
 // This optional code is used to register a service worker.
 // register() is not called by default.
 
+import { Api } from "./api";
+
 // This lets the app load faster on subsequent visits in production, and gives
 // it offline capabilities. However, it also means that developers (and users)
 // will only see deployed updates on subsequent visits to a page, after all the
@@ -25,7 +27,7 @@ type Config = {
 
 const runInLocalhost = false;
 
-export function register(config?: Config) {
+export async function register(api: Api, config?: Config): Promise<void> {
 	if ((runInLocalhost || process.env.NODE_ENV === 'production') && 'serviceWorker' in navigator) {
 		// The URL constructor is available in all browsers that support SW.
 		const publicUrl = new URL(process.env.PUBLIC_URL, window.location.href);
@@ -36,37 +38,43 @@ export function register(config?: Config) {
 			return;
 		}
 
-		window.addEventListener('load', async () => {
-			const swUrl = `${process.env.PUBLIC_URL}/service-worker.js`;
+		const swUrl = `${process.env.PUBLIC_URL}/service-worker.js`;
 
-			if (isLocalhost) {
-				// This is running on localhost. Let's check if a service worker still exists or not.
-				await checkValidServiceWorker(swUrl, config);
+		if (isLocalhost) {
+			// This is running on localhost. Let's check if a service worker still exists or not.
+			await checkValidServiceWorker(swUrl, api, config);
 
-				// Add some additional logging to localhost, pointing developers to the
-				// service worker/PWA documentation.
-				console.log(
-					'This web app is being served cache-first by a service ' +
-					'worker. To learn more, visit https://cra.link/PWA'
-				);
-			} else {
-				// Is not localhost. Just register service worker
-				await registerValidSW(swUrl, config);
-			}
-		});
+			// Add some additional logging to localhost, pointing developers to the
+			// service worker/PWA documentation.
+			console.log(
+				'This web app is being served cache-first by a service ' +
+				'worker. To learn more, visit https://cra.link/PWA'
+			);
+		} else {
+			// Is not localhost. Just register service worker
+			await registerValidSW(swUrl, api, config);
+		}
 	}
 }
 
-async function registerValidSW(swUrl: string, config?: Config) {
+export async function updateToken(token: string | null): Promise<void> {
+	const activeRegistration = await navigator.serviceWorker.ready;
+	activeRegistration.active?.postMessage({type: 'API_TOKEN', token: token});
+}
+
+async function registerValidSW(swUrl: string, api: Api, config?: Config) {
 	try {
 		const registration = await navigator.serviceWorker.register(swUrl);
-		const sub = await registration.pushManager.subscribe({
-			userVisibleOnly: true,
-			applicationServerKey: "BC9mb0wyou9SdfqmbDCM7t-irxvqiwDmzUmu8kGKf1PTFY_OTzmWiiH-nxALcCXsuiG6L7JeryPyF1gAlwgMF8c"
-		});
 
-		console.log(sub);
+		const activeRegistration = await navigator.serviceWorker.ready;
+		activeRegistration.active?.postMessage({type: 'API_TOKEN', token: api.token});
 
+		if (await activeRegistration.pushManager.getSubscription() === null) {
+			activeRegistration.pushManager.subscribe({
+				userVisibleOnly: true,
+				applicationServerKey: await api.getPublicApplicationServerKey()
+			})
+		}
 		registration.onupdatefound = () => {
 			const installingWorker = registration.installing;
 			if (installingWorker == null) {
@@ -106,7 +114,7 @@ async function registerValidSW(swUrl: string, config?: Config) {
 	}
 }
 
-async function checkValidServiceWorker(swUrl: string, config?: Config) {
+async function checkValidServiceWorker(swUrl: string, api: Api, config?: Config) {
 	try {
 		// Check if the service worker can be found. If it can't reload the page.
 		const response = await fetch(swUrl, {
@@ -126,20 +134,34 @@ async function checkValidServiceWorker(swUrl: string, config?: Config) {
 			});
 		} else {
 			// Service worker found. Proceed as normal.
-			await registerValidSW(swUrl, config);
+			await registerValidSW(swUrl, api, config);
 		}
 	} catch (error) {
 		console.log('No internet connection found. App is running in offline mode.', error);
 	}
 }
 
-export async function unregister() {
+export async function unregister(api: Api) {
 	if ('serviceWorker' in navigator) {
 		try {
 			const registration = await navigator.serviceWorker.ready;
+			const sub = await registration.pushManager.getSubscription();
+			if (sub) {
+				await sub.unsubscribe();
+				await api.removePushSubscription(sub.endpoint);
+			}
 			registration.unregister();
 		} catch (error) {
 			console.error(error);
 		}
 	}
 }
+
+// async function subscribePushNotifications(pushManager: PushManager, api: Api) {
+// 	const sub = await pushManager.subscribe({
+// 		userVisibleOnly: true,
+// 		applicationServerKey: await api.getPublicApplicationServerKey()
+// 	});
+
+// 	await api.addPushSubscription(sub);	
+// }

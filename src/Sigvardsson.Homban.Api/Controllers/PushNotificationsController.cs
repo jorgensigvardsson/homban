@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sigvardsson.Homban.Api.WebPush;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace Sigvardsson.Homban.Api.Controllers;
 
@@ -22,27 +23,31 @@ public class PushNotificationsController : ControllerBase
         m_notificationService = notificationService;
     }
 
-    // GET push-notifications-api/public-key
+    // GET push-notifications/public-key
     [HttpGet("public-key")]
-    public ContentResult GetPublicKey()
+    public IActionResult GetPublicKey()
     {
-        return Content(m_notificationService.PublicKey, "text/plain");
+        return Ok(m_notificationService.PublicKey);
     }
 
-    // POST push-notifications-api/subscriptions
+    // POST push-notifications/subscriptions
     [HttpPost("subscriptions")]
     public async Task<IActionResult> StoreSubscription([FromBody]PushSubscription subscription)
     {
+        var hasSubscription = await m_subscriptionStore.HasStoreSubscriptionAsync(subscription);
+        if (hasSubscription)
+            return Ok("Already subscribed");
+        
         await m_subscriptionStore.StoreSubscriptionAsync(subscription);
 
         return NoContent();
     }
 
-    // DELETE push-notifications-api/subscriptions?endpoint={endpoint}
-    [HttpDelete("subscriptions")]
+    // DELETE push-notifications/subscriptions/{endpoint}
+    [HttpDelete("subscriptions/{endpoint}")]
     public async Task<IActionResult> DiscardSubscription(string endpoint)
     {
-        await m_subscriptionStore.DiscardSubscriptionAsync(endpoint);
+        await m_subscriptionStore.DiscardSubscriptionAsync(HttpUtility.UrlDecode(endpoint));
 
         return NoContent();
     }

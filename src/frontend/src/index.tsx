@@ -18,10 +18,11 @@ const root = ReactDOM.createRoot(
 let tokenRenewalTimerId: number | null = null;
 const ONE_HOUR_INTERVAL = 1000 /* ms -> s */ * 60 /* s -> min */ * 60 /* min -> h */;
 
-const api = new ApiImplementation();
+const api = new ApiImplementation(localStorage.getItem("jwt"));
 let board: Board | null = null;
+let serviceWorkerRegistered = false;
 
-const showCause = process.env.NODE_ENV && process.env.NODE_ENV === 'development'
+const showCause = process.env.NODE_ENV && process.env.NODE_ENV === 'development' || true
 	? (state: State, cause: string) => console.info(`render: state = ${state}, cause = ${cause}`)
 	: () => {}
 
@@ -88,6 +89,16 @@ async function connected(): Promise<void> {
 	try {
 		board = await api.getBoard();
 		stateMachine.execute(Event.BoardFetched);
+		if (!serviceWorkerRegistered) {
+			// If you want your app to work offline and load faster, you can change
+			// unregister() to register() below. Note this comes with some pitfalls.
+			// Learn more about service workers: https://cra.link/PWA
+			serviceWorkerRegistration.register(api, {
+				//onUpdate: () => window.location.reload()
+			});
+		}
+
+		serviceWorkerRegistration.updateToken(api.token);
 	} catch (err) {
 		console.error("Failed to get board", err);
 		stateMachine.execute(Event.Reconnect);
@@ -155,6 +166,8 @@ function render(cause: string) {
 async function renewToken() {
 	if (!await api.renewToken()) {
 		stateMachine.execute(Event.Reconnect);
+	} else {
+		serviceWorkerRegistration.updateToken(api.token);
 	}
 }
 
@@ -183,10 +196,6 @@ api.webSocketDied = () => {
 	stateMachine.execute(Event.Reconnect);
 }
 
-// If you want your app to work offline and load faster, you can change
-// unregister() to register() below. Note this comes with some pitfalls.
-// Learn more about service workers: https://cra.link/PWA
-serviceWorkerRegistration.register();
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

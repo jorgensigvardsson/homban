@@ -13,8 +13,11 @@ import { ExpirationPlugin } from 'workbox-expiration';
 import { precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { StaleWhileRevalidate } from 'workbox-strategies';
+import { ApiImplementation } from './api';
 
 declare const self: ServiceWorkerGlobalScope;
+
+const api = new ApiImplementation(null);
 
 clientsClaim();
 
@@ -29,55 +32,94 @@ precacheAndRoute(self.__WB_MANIFEST);
 // https://developers.google.com/web/fundamentals/architecture/app-shell
 const fileExtensionRegexp = new RegExp('/[^/?]+\\.[^/]+$');
 registerRoute(
-  // Return false to exempt requests from being fulfilled by index.html.
-  ({ request, url }: { request: Request; url: URL }) => {
-    // If this isn't a navigation, skip.
-    if (request.mode !== 'navigate') {
-      return false;
-    }
+	// Return false to exempt requests from being fulfilled by index.html.
+	({ request, url }: { request: Request; url: URL }) => {
+		// If this isn't a navigation, skip.
+		if (request.mode !== 'navigate') {
+			return false;
+		}
 
-    // If this is a URL that starts with /_, skip.
-    if (url.pathname.startsWith('/_')) {
-      return false;
-    }
+		// If this is a URL that starts with /_, skip.
+		if (url.pathname.startsWith('/_')) {
+			return false;
+		}
 
-    // If this looks like a URL for a resource, because it contains
-    // a file extension, skip.
-    if (url.pathname.match(fileExtensionRegexp)) {
-      return false;
-    }
+		// If this looks like a URL for a resource, because it contains
+		// a file extension, skip.
+		if (url.pathname.match(fileExtensionRegexp)) {
+			return false;
+		}
 
-    // Return true to signal that we want to use the handler.
-    return true;
-  },
-  createHandlerBoundToURL(process.env.PUBLIC_URL + '/index.html')
+		// Return true to signal that we want to use the handler.
+		return true;
+	},
+	createHandlerBoundToURL(process.env.PUBLIC_URL + '/index.html')
 );
 
 // An example runtime caching route for requests that aren't handled by the
 // precache, in this case same-origin .png requests like those from in public/
 registerRoute(
-  // Add in any other file extensions or routing criteria as needed.
-  ({ url }) => url.origin === self.location.origin && url.pathname.endsWith('.png'),
-  // Customize this strategy as needed, e.g., by changing to CacheFirst.
-  new StaleWhileRevalidate({
-    cacheName: 'images',
-    plugins: [
-      // Ensure that once this runtime cache reaches a maximum size the
-      // least-recently used images are removed.
-      new ExpirationPlugin({ maxEntries: 50 }),
-    ],
-  })
+	// Add in any other file extensions or routing criteria as needed.
+	({ url }) => url.origin === self.location.origin && url.pathname.endsWith('.png'),
+	// Customize this strategy as needed, e.g., by changing to CacheFirst.
+	new StaleWhileRevalidate({
+		cacheName: 'images',
+		plugins: [
+			// Ensure that once this runtime cache reaches a maximum size the
+			// least-recently used images are removed.
+			new ExpirationPlugin({ maxEntries: 50 }),
+		],
+	})
 );
 
 // This allows the web app to trigger skipWaiting via
 // registration.waiting.postMessage({type: 'SKIP_WAITING'})
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+	if (event.data && event.data.type === 'SKIP_WAITING') {
+		self.skipWaiting();
+	}
+
+	if (event.data && event.data.type === 'API_TOKEN') {
+		api.token = event.data.token;
+	}
+});
+
+self.addEventListener('install', function(event) {
+    event.waitUntil(self.skipWaiting()); // Activate worker immediately
+});
+
+self.addEventListener('activate', function(event) {
+    event.waitUntil(self.clients.claim()); // Become available to all pages
 });
 
 // Any other custom service worker logic can go here.
 self.addEventListener('push', e => {
-	console.log("TODO: Do something with push event!", e);
+	e.waitUntil(self.registration.showNotification("Homban", {
+		body: e.data?.text() ?? "",
+		icon: "/logo192.png"
+	}))
+})
+
+self.addEventListener('pushsubscriptionchange', (event: any) => {
+	let promiseChain = Promise.resolve();
+
+	if (event.oldSubscription) {
+		promiseChain = promiseChain.then(() => api.removePushSubscription(event.oldSubscription.endpoint));
+	}
+
+	if (event.newSubscription) {
+		promiseChain = promiseChain.then(() => api.addPushSubscription(event.newSubscription));
+	}
+
+	if (!event.newSubscription) {
+		promiseChain = promiseChain.then(async () => {
+			const appServerKey = await api.getPublicApplicationServerKey();
+			const sub = await self.registration.pushManager.subscribe({
+				userVisibleOnly: true,
+				applicationServerKey: appServerKey
+			});
+			await api.addPushSubscription(sub);
+		});
+	}
+	event.waitUntil(promiseChain);
 })

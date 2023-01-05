@@ -138,11 +138,11 @@ public class BackingStoreService : IBackingStoreService, IDisposable
             // It's an old time span! Let's convert it into a "new" duration, and be happy with that
             var years = (int) timeSpan.TotalDays / 365;
             if (years > 0)
-                timeSpan = timeSpan - TimeSpan.FromDays(years * 365);
+                timeSpan -= TimeSpan.FromDays(years * 365);
 
             var months = (int) timeSpan.TotalDays / 30;
             if (months > 0)
-                timeSpan = timeSpan - TimeSpan.FromDays(months * 30);
+                timeSpan -= TimeSpan.FromDays(months * 30);
             
             var halfYears = months / 6;
             if (halfYears > 0)
@@ -154,7 +154,7 @@ public class BackingStoreService : IBackingStoreService, IDisposable
 
             var weeks = (int) timeSpan.TotalDays / 7;
             if (weeks > 0)
-                timeSpan = timeSpan - TimeSpan.FromDays(weeks * 7);
+                timeSpan -= TimeSpan.FromDays(weeks * 7);
 
             return new Duration(
                 Years: years,

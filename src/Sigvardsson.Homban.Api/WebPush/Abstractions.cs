@@ -20,6 +20,7 @@ public interface IPushNotificationsQueue
 
 public interface IPushSubscriptionStore
 {
+    Task<bool> HasStoreSubscriptionAsync(PushSubscription subscription);
     Task StoreSubscriptionAsync(PushSubscription subscription);
     Task DiscardSubscriptionAsync(string endpoint);
     Task ForEachSubscriptionAsync(Action<PushSubscription> action);

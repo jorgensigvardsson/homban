@@ -5,6 +5,10 @@ import { formatDuration, parseDurationStrict } from "./duration";
 import { Board, Schedule, Task, BoardAndTask, TaskData, TaskDictionary, Lane, IdentifiedTask } from "./models/board";
 
 export interface Api {
+	readonly token: string | null;
+	addPushSubscription(sub: PushSubscription): Promise<void>;
+	getPublicApplicationServerKey(): Promise<string>;
+	removePushSubscription(endpoint: string): Promise<void>;
 	getBoard(): Promise<Board>;
 	moveTask(taskId: string, lane: Lane, index: number): Promise<BoardAndTask>;
 	updateTask(taskId: string, task: TaskData): Promise<BoardAndTask>;
@@ -20,8 +24,6 @@ export interface Api {
 	set webSocketDied(value: null | (() => void));
 }
 
-let token: string | null = localStorage.getItem("jwt");
-
 const basePath = (path: string) => `api/${path}`;
 
 const origin = process.env.NODE_ENV && process.env.NODE_ENV === 'development' ? "https://localhost:7099" : "";
@@ -36,81 +38,6 @@ const baseWebSocketAddress = (path: string, token: string) => {
 	return `${wsOrigin}/${basePath(path)}?token=${encodeURIComponent(token)}`
 }
 
-async function opWithoutBody(method: string, path: string): Promise<any> {
-	const address = baseAddress(path);
-
-	const headers: any = {
-		accept: "application/json"
-	};
-
-
-	if (token) {
-		headers.authorization = `Bearer ${token}`
-	}
-
-	const response = await fetch(
-		address,
-		{
-			method: method,
-			headers: headers
-		}
-	);
-	if (!response.ok)
-		throw new Error(`Failed to ${method} ${address}: ${response.status}`);
-		
-	return await response.json();
-}
-
-function get(path: string): Promise<any> {
-	return opWithoutBody("get", path);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function del(path: string): Promise<any> {
-	return opWithoutBody("delete", path);
-}
-
-async function opWithBody(method: string, path: string, body: any): Promise<any> {
-	const address = baseAddress(path);
-
-	const headers: any = {
-		accept: "application/json",
-		'Content-Type': 'application/json'
-	};
-
-
-	if (token) {
-		headers.authorization = `Bearer ${token}`
-	}
-
-	const response = await fetch(
-		address,
-		{
-			method: method,
-			headers: headers,
-			body: JSON.stringify(body)
-		}
-	);
-	if (!response.ok)
-		throw new Error(`Failed to ${method} ${address}: ${response.status}`);
-		
-	return await response.json();
-}
-
-function put(path: string, body: any): Promise<any> {
-	return opWithBody("put", path, body);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function patch(path: string, body: any): Promise<any> {
-	return opWithBody("patch", path, body);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function post(path: string, body?: any): Promise<any> {
-	return body === undefined ? opWithoutBody("post", path) : opWithBody("post", path, body);
-}
-
 const PingInterval = 20 * 1000; // Ping web socket server ever 20 second
 
 export class ApiImplementation implements Api {
@@ -118,24 +45,107 @@ export class ApiImplementation implements Api {
 	private webSocket: WebSocket | null = null;
 	private intervalHandle: number | null = null;
 
+	constructor(public token: string | null) {	}
+
+	private async opWithoutBody(method: string, path: string): Promise<any> {
+		const address = baseAddress(path);
+
+		const headers: any = {
+			accept: "application/json"
+		};
+
+
+		if (this.token) {
+			headers.authorization = `Bearer ${this.token}`
+		}
+
+		const response = await fetch(
+			address,
+			{
+				method: method,
+				headers: headers
+			}
+		);
+		if (!response.ok)
+			throw new Error(`Failed to ${method} ${address}: ${response.status}`);
+		
+		if (response.status === 204)
+			return null;
+
+		return await response.json();
+	}
+
+	private get(path: string): Promise<any> {
+		return this.opWithoutBody("get", path);
+	}
+
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	private del(path: string): Promise<any> {
+		return this.opWithoutBody("delete", path);
+	}
+
+	private async opWithBody(method: string, path: string, body: any): Promise<any> {
+		const address = baseAddress(path);
+
+		const headers: any = {
+			accept: "application/json",
+			'Content-Type': 'application/json'
+		};
+
+
+		if (this.token) {
+			headers.authorization = `Bearer ${this.token}`
+		}
+
+		const response = await fetch(
+			address,
+			{
+				method: method,
+				headers: headers,
+				body: JSON.stringify(body)
+			}
+		);
+		if (!response.ok)
+			throw new Error(`Failed to ${method} ${address}: ${response.status}`);
+		
+		if (response.status === 204)
+			return null;
+		
+		return await response.json();
+	}
+
+	private put(path: string, body: any): Promise<any> {
+		return this.opWithBody("put", path, body);
+	}
+
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	private patch(path: string, body: any): Promise<any> {
+		return this.opWithBody("patch", path, body);
+	}
+
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	private post(path: string, body?: any): Promise<any> {
+		return body === undefined ? this.opWithoutBody("post", path) : this.opWithBody("post", path, body);
+	}
+
 	async getBoard(): Promise<Board> {
-		return boardToModel(await get("board"));
+		return boardToModel(await this.get("board"));
 	}
 
 	async moveTask(taskId: string, lane: Lane, index: number): Promise<BoardAndTask> {
-		return boardAndTaskToModel(await put(`board/task/${encodeURIComponent(taskId)}/move`, { lane: laneToDto(lane), index: index }));
+		return boardAndTaskToModel(await this.put(`board/task/${encodeURIComponent(taskId)}/move`, { lane: laneToDto(lane), index: index }));
 	}
 
 	async updateTask(taskId: string, task: TaskData): Promise<BoardAndTask> {
-		return boardAndTaskToModel(await put(`board/task/${encodeURIComponent(taskId)}`, taskUpdateToDto(task)));
+		return boardAndTaskToModel(await this.put(`board/task/${encodeURIComponent(taskId)}`, taskUpdateToDto(task)));
 	}
 
 	async createTask(task: TaskData): Promise<BoardAndTask> {
-		return boardAndTaskToModel(await post("board/task", taskUpdateToDto(task)));
+		return boardAndTaskToModel(await this.post("board/task", taskUpdateToDto(task)));
 	}
 
 	async deleteTask(taskId: string): Promise<Board> {
-		return boardToModel(await del(`board/task/${taskId}`));
+		return boardToModel(await this.del(`board/task/${taskId}`));
 	}
 
 	get webSocketDied() {
@@ -158,13 +168,13 @@ export class ApiImplementation implements Api {
 	}
 
 	async connectWebSocket(callback: (message: WebSocketMessage) => Promise<void>): Promise<void> {
-		if (!token)
+		if (!this.token)
 			throw new Error("No authentication performed. Quitting.");
 
 		if (this.webSocket && this.webSocket.readyState === WebSocket.OPEN)
 			return;
 
-		const tokenAtCallTime = token;
+		const tokenAtCallTime = this.token;
 		return new Promise((resolve, reject) => {
 			try {
 				this.webSocket = new WebSocket(baseWebSocketAddress("web-socket", tokenAtCallTime));
@@ -221,7 +231,7 @@ export class ApiImplementation implements Api {
 	}
 
 	private pingWebSocket(): void {
-		if (!token)
+		if (!this.token)
 			throw new Error("No authentication performed. Quitting.");
 
 		if (!this.webSocket || this.webSocket.readyState !== WebSocket.OPEN)
@@ -233,11 +243,11 @@ export class ApiImplementation implements Api {
 	}
 
 	async checkAuth(): Promise<boolean> {
-		if (token === null)
+		if (this.token === null)
 			return false;
 
 		try {
-			const claims = jwtDecode<JwtPayload>(token);
+			const claims = jwtDecode<JwtPayload>(this.token);
 			if (!claims.exp || claims.exp * 1000 < Date.now()) {
 				localStorage.removeItem("jwt");
 				return false;
@@ -254,7 +264,7 @@ export class ApiImplementation implements Api {
 				method: "GET",
 				headers: {
 					accept: "application/json",
-					authorization: `Bearer ${token}`
+					authorization: `Bearer ${this.token}`
 				}
 			}
 		);
@@ -283,7 +293,7 @@ export class ApiImplementation implements Api {
 		);
 
 		if (response.ok) {
-			localStorage.setItem("jwt", token = await response.json());
+			localStorage.setItem("jwt", this.token = await response.json());
 			return true;
 		}
 
@@ -302,13 +312,13 @@ export class ApiImplementation implements Api {
 				headers: {
 					accept: "application/json",
 					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${token}`
+					'Authorization': `Bearer ${this.token}`
 				}
 			}
 		);
 
 		if (response.ok) {
-			localStorage.setItem("jwt", token = await response.json());
+			localStorage.setItem("jwt", this.token = await response.json());
 			return true;
 		}
 
@@ -320,6 +330,17 @@ export class ApiImplementation implements Api {
 
 	get isWebSocketAlive(): boolean {
 		return this.webSocket?.readyState === 1;
+	}
+
+	addPushSubscription(sub: PushSubscription): Promise<void> {
+		return this.post("push-notifications/subscriptions", sub);
+	}
+
+	getPublicApplicationServerKey(): Promise<string> {
+		return this.get("push-notifications/public-key");
+	}
+	removePushSubscription(endpoint: string): Promise<void> {
+		return this.del(`push-notifications/subscriptions/${encodeURIComponent(endpoint)}`)
 	}
 }
 

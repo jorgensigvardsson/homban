@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Lib.Net.Http.WebPush;
@@ -16,6 +17,11 @@ public class SqlitePushSubscriptionStore : IPushSubscriptionStore
     public SqlitePushSubscriptionStore(PushSubscriptionContext context)
     {
         m_context = context;
+    }
+
+    public Task<bool> HasStoreSubscriptionAsync(PushSubscription subscription)
+    {
+        return m_context.Subscriptions.Select(s => s.Endpoint == subscription.Endpoint).AnyAsync();
     }
 
     public Task StoreSubscriptionAsync(PushSubscription subscription)

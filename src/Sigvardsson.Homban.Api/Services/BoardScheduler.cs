@@ -1,9 +1,10 @@
 using System;
 using System.Threading;
+using Lib.Net.Http.WebPush;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Nito.AsyncEx;
-
+using Sigvardsson.Homban.Api.WebPush;
 using ThreadTask = System.Threading.Tasks.Task;
 
 namespace Sigvardsson.Homban.Api.Services;
@@ -15,19 +16,22 @@ public class BoardScheduler : BackgroundService
     private readonly IInactiveTaskScheduler m_inactiveTaskScheduler;
     private readonly IThreadControl m_threadControl;
     private readonly IClock m_clock;
+    private readonly IPushNotificationsQueue m_pushNotificationsQueue;
     private readonly AsyncAutoResetEvent m_boardChangedEvent = new();
 
     public BoardScheduler(IBoardService boardService,
                           ILogger<BoardScheduler> logger,
                           IInactiveTaskScheduler inactiveTaskScheduler,
                           IThreadControl threadControl,
-                          IClock clock)
+                          IClock clock,
+                          IPushNotificationsQueue pushNotificationsQueue)
     {
         m_boardService = boardService ?? throw new ArgumentNullException(nameof(boardService));
         m_logger = logger ?? throw new ArgumentNullException(nameof(logger));
         m_inactiveTaskScheduler = inactiveTaskScheduler ?? throw new ArgumentNullException(nameof(inactiveTaskScheduler));
         m_threadControl = threadControl ?? throw new ArgumentNullException(nameof(threadControl));
         m_clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        m_pushNotificationsQueue = pushNotificationsQueue ?? throw new ArgumentNullException(nameof(pushNotificationsQueue));
     }
 
     protected override async System.Threading.Tasks.Task ExecuteAsync(CancellationToken stoppingToken)
@@ -56,7 +60,10 @@ public class BoardScheduler : BackgroundService
                 else
                 {
                     // It was the delay task that expired, so make sure to update the board!
-                    await UpdateBoard(board, m_clock.Now, stoppingToken);
+                    if (await UpdateBoard(board, m_clock.Now, stoppingToken))
+                    {
+                        m_pushNotificationsQueue.Enqueue(new PushMessage("Nya uppgifter finns redo att utföras!"));
+                    }
                 }
             }
         }
@@ -76,7 +83,7 @@ public class BoardScheduler : BackgroundService
         return ThreadTask.CompletedTask;
     }
 
-    private async ThreadTask UpdateBoard(Board board, DateTimeOffset now, CancellationToken cancellationToken)
+    private async System.Threading.Tasks.Task<bool> UpdateBoard(Board board, DateTimeOffset now, CancellationToken cancellationToken)
     {
         // Tasks that have been in the state "done" long enough are moved to inactive state
         foreach (var taskId in board.DoneLaneTasks)
@@ -84,13 +91,19 @@ public class BoardScheduler : BackgroundService
             if (NextDayOf(board.Tasks[taskId].LastChange) <= now)
                 await m_boardService.MoveTask(taskId, Lane.Inactive, 0, cancellationToken);
         }
-        
+
+        var anyTasksMadeReady = false;
         foreach (var taskId in board.InactiveLaneTasks)
         {
             var taskNextTime = m_inactiveTaskScheduler.ScheduleReady(board.Tasks[taskId], now);
             if (taskNextTime <= now)
+            {
                 await m_boardService.MoveTask(taskId, Lane.Ready, 0, cancellationToken);
+                anyTasksMadeReady = true;
+            }
         }
+
+        return anyTasksMadeReady;
     }
 
     private DateTimeOffset NextDayOf(DateTimeOffset time)
