@@ -19,7 +19,7 @@ using ThreadTask = System.Threading.Tasks.Task;
 namespace Sigvardsson.Homban.Api.Controllers;
 
 [ApiController]
-[Route("/api/web-socket")]
+[ApiExplorerSettings(IgnoreApi = true)]
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class WebSocketController : ControllerBase
 {
@@ -45,7 +45,7 @@ public class WebSocketController : ControllerBase
         m_tokenValidationParameters = tokenValidationParameters ?? throw new ArgumentNullException(nameof(tokenValidationParameters));
     }
 
-    [HttpGet]
+    [Route("/api/web-socket")]
     [AllowAnonymous]
     public async ThreadTask GetWebSocket([FromQuery(Name = "token")] string token, CancellationToken cancellationToken)
     {

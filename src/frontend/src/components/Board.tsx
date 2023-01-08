@@ -8,8 +8,21 @@ interface Props {
 	onTaskDrop: (board: BoardModel, taskId: string, task: Task, lane: Lane, index: number) => void;
 }
 
+const vibrate = (vibs: Array<number>) => {
+	if (!Boolean(navigator.vibrate))
+		return;
+	
+	navigator.vibrate(vibs);
+}
+
+const VIB_FREQ = 25;
+
 export const Board = (props: Props) => {
 	const { board, onTaskDrop } = props;
+
+	const onDragStart = () => {
+		vibrate([VIB_FREQ]);
+	}
 
 	const onDragEnd = (result: DropResult, provided: ResponderProvided) => {
 		const task = board.tasks[result.draggableId];
@@ -24,12 +37,15 @@ export const Board = (props: Props) => {
 		switch (result.destination.droppableId) {
 			case 'ready':
 				lane = Lane.Ready;
+				vibrate([VIB_FREQ]);
 				break;
 			case 'in-progress':
 				lane = Lane.InProgress;
+				vibrate([VIB_FREQ]);
 				break;
 			case 'done':
 				lane = Lane.Done;
+				vibrate([VIB_FREQ, VIB_FREQ, VIB_FREQ]);
 				break;
 			default:
 				return;
@@ -49,7 +65,8 @@ export const Board = (props: Props) => {
 	}
 
 	return (
-		<DragDropContext onDragEnd={(r, p) => onDragEnd(r, p)}>
+		<DragDropContext onDragEnd={(r, p) => onDragEnd(r, p)}
+		                 onDragStart={(s, p) => onDragStart()}>
 			<div className="BoardContainer">
 				<div className="BoardTitle">
 					<div className="LaneTitle">Ready</div>

@@ -40,6 +40,8 @@ public class BoardScheduler : BackgroundService
             {
                 var board = await m_boardService.ReadBoard(stoppingToken);
                 var sleepDuration = CalculateSleep(board, m_clock.Now);
+
+                m_logger.LogInformation("Sleep duration: {SleepDuration}", sleepDuration.ToString("c"));
                
                 boardChangedEventTask ??= m_boardChangedEvent.WaitAsync(stoppingToken);
 
@@ -50,11 +52,13 @@ public class BoardScheduler : BackgroundService
 
                 if (expiredTask == boardChangedEventTask)
                 {
+                    m_logger.LogInformation("Board changed: rescheduling.");
                     // The board has changed, so let's reschedule everything
                     boardChangedEventTask = null;
                 }
                 else
                 {
+                    m_logger.LogInformation("Slept: now updating board.");
                     // It was the delay task that expired, so make sure to update the board!
                     await UpdateBoard(board, m_clock.Now, stoppingToken);
                 }
@@ -63,6 +67,7 @@ public class BoardScheduler : BackgroundService
         catch (OperationCanceledException)
         {
             // Expected
+            m_logger.LogInformation("Board scheduler has been requested to terminate.");
         }
         catch (Exception ex)
         {
@@ -82,14 +87,30 @@ public class BoardScheduler : BackgroundService
         foreach (var taskId in board.DoneLaneTasks)
         {
             if (NextDayOf(board.Tasks[taskId].LastChange) <= now)
+            {
+                m_logger.LogInformation(
+                    "Done task: it's a new day, so we're moving task {Task} from Done to Inactive. Last Change = {TasksLastChange}, now = {Now}.",
+                    board.Tasks[taskId].Title,
+                    board.Tasks[taskId].LastChange.ToString("u"),
+                    now.ToString("u")
+                );
                 await m_boardService.MoveTask(taskId, Lane.Inactive, 0, cancellationToken);
+            }
         }
         
         foreach (var taskId in board.InactiveLaneTasks)
         {
             var taskNextTime = m_inactiveTaskScheduler.ScheduleReady(board.Tasks[taskId], now);
-            if (taskNextTime <= now)
+            if (taskNextTime != null && taskNextTime.Value <= now)
+            {
+                m_logger.LogInformation(
+                    "Inactive task: it's time to move {Task} from Inactive to Ready. Scheduled time = {TaskNextTime}, now = {now}",
+                    board.Tasks[taskId].Title,
+                    taskNextTime.Value.ToString("u"),
+                    now.ToString("u")
+                );
                 await m_boardService.MoveTask(taskId, Lane.Ready, 0, cancellationToken);
+            }
         }
     }
 
@@ -106,7 +127,9 @@ public class BoardScheduler : BackgroundService
         {
             var task = board.Tasks[taskId];
             if (nextTime == null || NextDayOf(task.LastChange) < nextTime)
+            {
                 nextTime = NextDayOf(task.LastChange);
+            }
         }
         
         foreach (var taskId in board.InactiveLaneTasks)
