@@ -17,7 +17,7 @@ import { ApiImplementation } from './api';
 
 declare const self: ServiceWorkerGlobalScope;
 
-const api = new ApiImplementation(null);
+const api = new ApiImplementation(self.location, null);
 
 clientsClaim();
 
@@ -80,6 +80,7 @@ self.addEventListener('message', (event) => {
 	}
 
 	if (event.data && event.data.type === 'API_TOKEN') {
+		console.log("token received in service-worker...");
 		api.token = event.data.token;
 	}
 });
@@ -95,7 +96,7 @@ self.addEventListener('activate', function(event) {
 // Any other custom service worker logic can go here.
 self.addEventListener('push', e => {
 	e.waitUntil(self.registration.showNotification("Homban", {
-		body: e.data?.text() ?? "",
+		body: e.data?.text() ?? "<no text sent>",
 		icon: "/logo192.png"
 	}))
 })
@@ -112,6 +113,7 @@ self.addEventListener('pushsubscriptionchange', (event: any) => {
 	}
 
 	if (!event.newSubscription) {
+		console.log("registering subscription in worker");
 		promiseChain = promiseChain.then(async () => {
 			const appServerKey = await api.getPublicApplicationServerKey();
 			const sub = await self.registration.pushManager.subscribe({

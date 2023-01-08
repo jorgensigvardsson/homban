@@ -18,7 +18,7 @@ const root = ReactDOM.createRoot(
 let tokenRenewalTimerId: number | null = null;
 const ONE_HOUR_INTERVAL = 1000 /* ms -> s */ * 60 /* s -> min */ * 60 /* min -> h */;
 
-const api = new ApiImplementation(localStorage.getItem("jwt"));
+const api = new ApiImplementation(window.location, localStorage.getItem("jwt"));
 let board: Board | null = null;
 let serviceWorkerRegistered = false;
 
@@ -93,9 +93,7 @@ async function connected(): Promise<void> {
 			// If you want your app to work offline and load faster, you can change
 			// unregister() to register() below. Note this comes with some pitfalls.
 			// Learn more about service workers: https://cra.link/PWA
-			serviceWorkerRegistration.register(api, {
-				//onUpdate: () => window.location.reload()
-			});
+			serviceWorkerRegistration.register(api);
 		}
 
 		serviceWorkerRegistration.updateToken(api.token);
@@ -116,7 +114,9 @@ function renderStatusText(text: string) {
 const hasNotificationPermissions = () => Notification.permission === "granted" 
 
 const requestNotificationPermissions = async () => {
-	await Notification.requestPermission();
+	if (await Notification.requestPermission() === "granted") {
+		await serviceWorkerRegistration.registerNotifications(api);
+	}
 	render("Notification permissions handled");
 }
 

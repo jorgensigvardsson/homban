@@ -28,6 +28,9 @@ type Config = {
 const runInLocalhost = false;
 
 export async function register(api: Api, config?: Config): Promise<void> {
+	console.log("runInLocalhost", runInLocalhost);
+	console.log("process.env", process.env);
+
 	if ((runInLocalhost || process.env.NODE_ENV === 'production') && 'serviceWorker' in navigator) {
 		// The URL constructor is available in all browsers that support SW.
 		const publicUrl = new URL(process.env.PUBLIC_URL, window.location.href);
@@ -58,6 +61,7 @@ export async function register(api: Api, config?: Config): Promise<void> {
 }
 
 export async function updateToken(token: string | null): Promise<void> {
+	console.log("posting token to service-worker...");
 	const activeRegistration = await navigator.serviceWorker.ready;
 	activeRegistration.active?.postMessage({type: 'API_TOKEN', token: token});
 }
@@ -66,15 +70,6 @@ async function registerValidSW(swUrl: string, api: Api, config?: Config) {
 	try {
 		const registration = await navigator.serviceWorker.register(swUrl);
 
-		const activeRegistration = await navigator.serviceWorker.ready;
-		activeRegistration.active?.postMessage({type: 'API_TOKEN', token: api.token});
-
-		if (await activeRegistration.pushManager.getSubscription() === null) {
-			activeRegistration.pushManager.subscribe({
-				userVisibleOnly: true,
-				applicationServerKey: await api.getPublicApplicationServerKey()
-			})
-		}
 		registration.onupdatefound = () => {
 			const installingWorker = registration.installing;
 			if (installingWorker == null) {
@@ -141,6 +136,25 @@ async function checkValidServiceWorker(swUrl: string, api: Api, config?: Config)
 	}
 }
 
+export async function registerNotifications(api: Api) {
+	console.log("awaiting serviceWorker...");
+	const activeRegistration = await navigator.serviceWorker.ready;
+	
+	console.log("registering subscription in worker registration");
+	activeRegistration.active?.postMessage({type: 'API_TOKEN', token: api.token});
+
+	let subscription = await activeRegistration.pushManager.getSubscription();
+	if (subscription === null) {
+		console.log("No subscription since before, calling subscribe...");
+		subscription = await activeRegistration.pushManager.subscribe({
+			userVisibleOnly: true,
+			applicationServerKey: await api.getPublicApplicationServerKey()
+		})
+	}
+	console.log("pushing subscription to api", subscription);
+	await api.addPushSubscription(subscription);
+}
+
 export async function unregister(api: Api) {
 	if ('serviceWorker' in navigator) {
 		try {
@@ -156,12 +170,3 @@ export async function unregister(api: Api) {
 		}
 	}
 }
-
-// async function subscribePushNotifications(pushManager: PushManager, api: Api) {
-// 	const sub = await pushManager.subscribe({
-// 		userVisibleOnly: true,
-// 		applicationServerKey: await api.getPublicApplicationServerKey()
-// 	});
-
-// 	await api.addPushSubscription(sub);	
-// }

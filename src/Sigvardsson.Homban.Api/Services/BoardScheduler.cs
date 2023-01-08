@@ -56,9 +56,11 @@ public class BoardScheduler : BackgroundService
                 {
                     // The board has changed, so let's reschedule everything
                     boardChangedEventTask = null;
+                    m_logger.LogInformation("Board has changed: rescheduling.");
                 }
                 else
                 {
+                    m_logger.LogInformation("Sleep has expired: updating board.");
                     // It was the delay task that expired, so make sure to update the board!
                     if (await UpdateBoard(board, m_clock.Now, stoppingToken))
                     {

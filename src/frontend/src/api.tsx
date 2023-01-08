@@ -24,31 +24,32 @@ export interface Api {
 	set webSocketDied(value: null | (() => void));
 }
 
-const basePath = (path: string) => `api/${path}`;
-
-const origin = process.env.NODE_ENV && process.env.NODE_ENV === 'development' ? "https://localhost:7099" : "";
-const wsOrigin = process.env.NODE_ENV && process.env.NODE_ENV === 'development' ? "wss://localhost:7099" : `wss://${window.location.host}`;
-
-// TODO: Make this configurable!
-const baseAddress = (path: string) => {
-	return `${origin}/${basePath(path)}`
-}
-
-const baseWebSocketAddress = (path: string, token: string) => {
-	return `${wsOrigin}/${basePath(path)}?token=${encodeURIComponent(token)}`
-}
-
 const PingInterval = 20 * 1000; // Ping web socket server ever 20 second
 
 export class ApiImplementation implements Api {
 	private webSocketDiedHandler: null | (() => void) = null;
 	private webSocket: WebSocket | null = null;
 	private intervalHandle: number | null = null;
+	private origin: string;
+	private wsOrigin: string;
 
-	constructor(public token: string | null) {	}
+	private basePath = (path: string) => `api/${path}`;
+
+	private baseAddress = (path: string) => {
+		return `${this.origin}/${this.basePath(path)}`
+	}
+	
+	private baseWebSocketAddress = (path: string, token: string) => {
+		return `${this.wsOrigin}/${this.basePath(path)}?token=${encodeURIComponent(token)}`
+	}
+
+	constructor (location: Location | WorkerLocation, public token: string | null) {
+		this.origin = process.env.NODE_ENV && process.env.NODE_ENV === 'development' ? "https://localhost:7099" : "";
+		this.wsOrigin = process.env.NODE_ENV && process.env.NODE_ENV === 'development' ? "wss://localhost:7099" : `wss://${location.host}`;
+	}
 
 	private async opWithoutBody(method: string, path: string): Promise<any> {
-		const address = baseAddress(path);
+		const address = this.baseAddress(path);
 
 		const headers: any = {
 			accept: "application/json"
@@ -85,7 +86,7 @@ export class ApiImplementation implements Api {
 	}
 
 	private async opWithBody(method: string, path: string, body: any): Promise<any> {
-		const address = baseAddress(path);
+		const address = this.baseAddress(path);
 
 		const headers: any = {
 			accept: "application/json",
@@ -177,7 +178,7 @@ export class ApiImplementation implements Api {
 		const tokenAtCallTime = this.token;
 		return new Promise((resolve, reject) => {
 			try {
-				this.webSocket = new WebSocket(baseWebSocketAddress("web-socket", tokenAtCallTime));
+				this.webSocket = new WebSocket(this.baseWebSocketAddress("web-socket", tokenAtCallTime));
 				this.webSocket.onopen = () => {
 					resolve();
 					this.intervalHandle = window.setInterval(() => {
@@ -257,7 +258,7 @@ export class ApiImplementation implements Api {
 			return false;
 		}
 
-		const address = baseAddress("login/check");
+		const address = this.baseAddress("login/check");
 		const response = await fetch(
 			address,
 			{
@@ -279,7 +280,7 @@ export class ApiImplementation implements Api {
 	}
 
 	async login(username: string, password: string): Promise<boolean> {
-		const address = baseAddress("login");
+		const address = this.baseAddress("login");
 		const response = await fetch(
 			address,
 			{
@@ -304,7 +305,7 @@ export class ApiImplementation implements Api {
 	}
 
 	async renewToken(): Promise<boolean> {
-		const address = baseAddress("login/renew-token");
+		const address = this.baseAddress("login/renew-token");
 		const response = await fetch(
 			address,
 			{

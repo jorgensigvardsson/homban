@@ -46,6 +46,7 @@ public class WebSocketController : ControllerBase
 
     [Route("/api/web-socket")]
     [AllowAnonymous]
+    [ApiExplorerSettings(IgnoreApi=true)]
     public async ThreadTask GetWebSocket([FromQuery(Name = "token")] string token, CancellationToken cancellationToken)
     {
         if (!HttpContext.WebSockets.IsWebSocketRequest)
@@ -53,13 +54,13 @@ public class WebSocketController : ControllerBase
             m_httpContextAccessor.HttpContext!.Response.StatusCode = StatusCodes.Status400BadRequest;
             return;
         }
-
+    
         if (!ValidateToken(token))
         {
             m_httpContextAccessor.HttpContext!.Response.StatusCode = StatusCodes.Status401Unauthorized;
             return;
         }
-
+    
         try
         {
             using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();

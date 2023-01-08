@@ -1,3 +1,4 @@
+using System;
 using Lib.Net.Http.WebPush;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -15,12 +16,15 @@ public class PushNotificationsController : ControllerBase
 {
     private readonly IPushSubscriptionStore m_subscriptionStore;
     private readonly IPushNotificationService m_notificationService;
+    private readonly IPushNotificationsQueue m_pushNotificationsQueue;
 
     public PushNotificationsController(IPushSubscriptionStore subscriptionStore,
-                                       IPushNotificationService notificationService)
+                                       IPushNotificationService notificationService,
+                                       IPushNotificationsQueue pushNotificationsQueue)
     {
-        m_subscriptionStore = subscriptionStore;
-        m_notificationService = notificationService;
+        m_subscriptionStore = subscriptionStore ?? throw new ArgumentNullException(nameof(subscriptionStore));
+        m_notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+        m_pushNotificationsQueue = pushNotificationsQueue ?? throw new ArgumentNullException(nameof(pushNotificationsQueue));
     }
 
     // GET push-notifications/public-key
@@ -50,5 +54,13 @@ public class PushNotificationsController : ControllerBase
         await m_subscriptionStore.DiscardSubscriptionAsync(HttpUtility.UrlDecode(endpoint));
 
         return NoContent();
+    }
+
+    [AllowAnonymous]
+    [HttpPost]
+    public IActionResult Push([FromBody] string message)
+    {
+        m_pushNotificationsQueue.Enqueue(new PushMessage(message));
+        return Ok();
     }
 }
