@@ -27,4 +27,10 @@
         </PackageReference>
     </ItemGroup>
 
+    <ItemGroup>
+      <EmbeddedResource Include="TestClasses\Services\ensure-move-inactive-off-board-backing-store.json">
+          <LogicalName>ensure-move-inactive-off-board-backing-store.json</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+
 </Project>

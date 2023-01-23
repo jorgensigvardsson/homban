@@ -77,6 +77,7 @@ public class BoardScheduler : BackgroundService
 
     private System.Threading.Tasks.Task OnBoardChange(Board board)
     {
+        m_logger.LogInformation("BoardScheduler.OnBoardChange called - setting event.");
         m_boardChangedEvent.Set();
         return ThreadTask.CompletedTask;
     }

@@ -68,13 +68,21 @@ public class BoardService : IBoardService, IDisposable
     {
         return m_mutex.Locked(async () =>
         {
+            using var logScope = m_logger.BeginScope("EditBoard (Board -> BoardAndTask)");
+            
+            m_logger.LogInformation("Board read");
             var board = await GetBoard(cancellationToken);
             var boardAndTask = editor(board);
             if (ReferenceEquals(boardAndTask.Board, board))
+            {
+                m_logger.LogInformation("No change to board, returning same board and task.");
                 return boardAndTask;
-            
+            }
+
+            m_logger.LogInformation("Change detected, updating backing store with new board.");
             await m_backingStoreService.Set(boardAndTask.Board, cancellationToken);
             SetBoard(boardAndTask.Board);
+            m_logger.LogInformation("Firing observers.");
             await FireObservers(boardAndTask.Board);
             return boardAndTask;
         }, cancellationToken);
@@ -84,13 +92,22 @@ public class BoardService : IBoardService, IDisposable
     {
         return m_mutex.Locked(async () =>
         {
+            using var logScope = m_logger.BeginScope("EditBoard (Board -> Board)");
+            
             var board = await GetBoard(cancellationToken);
+            m_logger.LogInformation("Board read");
             var newBoard = editor(board);
             if (ReferenceEquals(newBoard, board))
+            {
+                m_logger.LogInformation("No change to board, returning same board.");
                 return board;
-                
+            }
+
+            m_logger.LogInformation("Change detected, updating backing store with new board.");
             await m_backingStoreService.Set(newBoard, cancellationToken);
             SetBoard(newBoard);
+            
+            m_logger.LogInformation("Firing observers.");
             await FireObservers(newBoard);
             return newBoard;
         }, cancellationToken);
@@ -128,8 +145,12 @@ public class BoardService : IBoardService, IDisposable
     {
         return EditBoard(board =>
         {
+            using var logScope = m_logger.BeginScope("CreateTask(TaskData, CancellationToken)");
+            
             var taskId = m_guidGenerator.NewGuid();
             var newTask = NewTask(taskId, taskData);
+            
+            m_logger.LogInformation("Task {TaskId} was created", taskId.ToString("D"));
 
             return new BoardAndTask(board with
             {
@@ -144,10 +165,16 @@ public class BoardService : IBoardService, IDisposable
     {
         return EditBoard(board =>
         {
+            using var logScope = m_logger.BeginScope("UpdateTask(Guid, TaskData, CancellationToken)");
+
             if (!board.Tasks.TryGetValue(taskId, out var task))
+            {
+                m_logger.LogInformation("Unknown task ID {TaskId}", taskId.ToString("D"));
                 throw new ArgumentException("Unknown task ID", nameof(taskId));
+            }
 
             var newTask = UpdateTask(taskId, task, taskData);
+            m_logger.LogInformation("Task {TaskId} was updated", taskId.ToString("D"));
             return new BoardAndTask(board with
             {
                 Tasks = board.Tasks.SetItem(taskId, newTask)
@@ -157,13 +184,18 @@ public class BoardService : IBoardService, IDisposable
 
     public Task<Board> DeleteTask(Guid taskId, CancellationToken cancellationToken)
     {
-        return EditBoard(board => board with
+        return EditBoard(board =>
         {
-            Tasks = board.Tasks.Remove(taskId),
-            ReadyLaneTasks = board.ReadyLaneTasks.Remove(taskId),
-            InProgressLaneTasks = board.InProgressLaneTasks.Remove(taskId),
-            DoneLaneTasks = board.DoneLaneTasks.Remove(taskId),
-            InactiveLaneTasks = board.InactiveLaneTasks.Remove(taskId)
+            m_logger.LogInformation("Deleting task {TaskId}", taskId.ToString("D"));
+            
+            return board with
+            {
+                Tasks = board.Tasks.Remove(taskId),
+                ReadyLaneTasks = board.ReadyLaneTasks.Remove(taskId),
+                InProgressLaneTasks = board.InProgressLaneTasks.Remove(taskId),
+                DoneLaneTasks = board.DoneLaneTasks.Remove(taskId),
+                InactiveLaneTasks = board.InactiveLaneTasks.Remove(taskId)
+            };
         }, cancellationToken);
     }
 
@@ -209,8 +241,13 @@ public class BoardService : IBoardService, IDisposable
     {
         return EditBoard(board =>
         {
+            using var logScope = m_logger.BeginScope("Moving Task");
+
             if (!board.Tasks.TryGetValue(taskId, out var task))
+            {
+                m_logger.LogInformation("Unknown task ID {TaskId}", taskId.ToString("D"));
                 throw new ArgumentException("Unknown task ID", nameof(taskId));
+            }
 
             var identifiedTask = new IdentifiedTask(
                 Id: taskId,
@@ -225,7 +262,11 @@ public class BoardService : IBoardService, IDisposable
 
             var (prevLane, prevIndex) = FindLaneAndIndex(board, taskId);
             if (prevLane == lane && prevIndex == index)
+            {
+                m_logger.LogInformation("No op: prevLane = {PrevLane}, lane = {Lane}, prevIndex = {PrevIndex}, index = {Index}", 
+                                        prevLane.ToString("G"), lane.ToString("G"), prevIndex, index);
                 return new BoardAndTask(board, identifiedTask);
+            }
 
             var newTask = identifiedTask with
             {
@@ -238,6 +279,9 @@ public class BoardService : IBoardService, IDisposable
             var inProgressLaneTasks = MoveTaskInLane(board.InProgressLaneTasks, taskId, prevLane == Lane.InProgress ? prevIndex : null, lane == Lane.InProgress ? index : null);
             var doneLaneTasks = MoveTaskInLane(board.DoneLaneTasks, taskId, prevLane == Lane.Done ? prevIndex : null, lane == Lane.Done ? index : null);
             var inactiveLaneTasks = MoveTaskInLane(board.InactiveLaneTasks, taskId, prevLane == Lane.Inactive ? prevIndex : null, lane == Lane.Inactive ? index : null);
+            
+            m_logger.LogInformation("Moving task from {PrevLane}:{PrevIndex} to {Lane}:{Index}", 
+                                    prevLane.ToString("G"), prevIndex, lane.ToString("G"), index);
 
             return new BoardAndTask(board with
             {
@@ -269,6 +313,7 @@ public class BoardService : IBoardService, IDisposable
         {
             try
             {
+                m_logger.LogInformation("Firing board observer...");
                 await observerRegistration.Observer(board);
             }
             catch (Exception ex)

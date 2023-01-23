@@ -35,14 +35,24 @@ public class BackingStoreService : IBackingStoreService, IDisposable
         m_backingStorePath = configuration["BackingStore"] ?? throw new ApplicationException("Missing configuration: BackingStore");
     }
 
+    protected virtual Stream OpenBackingStore()
+    {
+        return new FileStream(m_backingStorePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+    }
+
+    protected virtual bool BackingStoreExists()
+    {
+        return File.Exists(m_backingStorePath);
+    }
+
     public Task<Board> Get(CancellationToken cancellationToken)
     {
         return m_mutex.Locked(async () =>
         {
-            if (!File.Exists(m_backingStorePath))
+            if (!BackingStoreExists())
                 return new Board(Tasks: ImmutableDictionary<Guid, Task>.Empty, ReadyLaneTasks: ImmutableArray<Guid>.Empty, InProgressLaneTasks: ImmutableArray<Guid>.Empty, DoneLaneTasks: ImmutableArray<Guid>.Empty, InactiveLaneTasks: ImmutableArray<Guid>.Empty);
             
-            await using var fileStream = new FileStream(m_backingStorePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            await using var fileStream = OpenBackingStore();
             return ToModel(m_jsonSerializer.Deserialize<BoardStorageObject>(fileStream) ?? throw new ApplicationException("Backing store is corrupt"));
         }, cancellationToken);
     }
