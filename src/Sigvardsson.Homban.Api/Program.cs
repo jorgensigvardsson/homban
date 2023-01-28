@@ -13,6 +13,7 @@ using Serilog.Events;
 using Serilog.Sinks.Grafana.Loki;
 using Serilog.Sinks.SystemConsole.Themes;
 using Sigvardsson.Homban.Api.Controllers;
+using Sigvardsson.Homban.Api.Hubs;
 using Sigvardsson.Homban.Api.Services;
 
 namespace Sigvardsson.Homban.Api;
@@ -25,6 +26,7 @@ public static class Program
 
         var apiJsonSettings = new ApiJsonSettings();
         var utf8Encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+        builder.Services.AddSignalR(options => options.EnableDetailedErrors = true);
         builder.Services.AddSingleton<IBoardService, BoardService>();
         builder.Services.AddSingleton<IBackingStoreService, BackingStoreService>();
         builder.Services.AddSingleton<IConfigurableJsonSerializer<ApiJsonSettings>>(new ConfigurableJsonSerializer<ApiJsonSettings>(apiJsonSettings, utf8Encoding));
@@ -35,6 +37,7 @@ public static class Program
         builder.Services.AddSingleton<IThreadControl, ThreadControl>();
         builder.Services.AddSingleton<IClock, Clock>();
         builder.Services.AddSingleton<IGuidGenerator, GuidGenerator>();
+        builder.Services.AddSingleton<IBoardHubService, BoardHubService>();
         builder.Services
                .AddControllers()
                .AddNewtonsoftJson(o =>
@@ -100,12 +103,18 @@ public static class Program
 
         var app = builder.Build();
         
+#if DEBUG        
         app.UseCors(b =>
         {
-            b.AllowAnyOrigin()
-             .AllowAnyMethod()
+            b.WithOrigins("http://localhost:3000")
+             .AllowCredentials()
+             .AllowAnyHeader()
+             .AllowAnyMethod();
+            
+            b.AllowAnyMethod()
              .AllowAnyHeader();
         });
+#endif
 
         if (app.Environment.IsDevelopment())
         {
@@ -116,8 +125,8 @@ public static class Program
         app.UseAuthorization();
         app.UseAuthentication();
         app.MapControllers();
+        app.MapHub<BoardHub>("/board-hub");
         app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30)});
-
         app.UseSerilogRequestLogging();
 
         try

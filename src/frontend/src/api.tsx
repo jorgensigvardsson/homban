@@ -10,30 +10,20 @@ export interface Api {
 	updateTask(taskId: string, task: TaskData): Promise<BoardAndTask>;
 	createTask(task: TaskData): Promise<BoardAndTask>;
 	deleteTask(taskId: string): Promise<Board>;
-	connectWebSocket(callback: (message: WebSocketMessage) => Promise<void>): Promise<void>;
 	checkAuth(): Promise<boolean>;
 	login(username: string, password: string): Promise<boolean>;
 	renewToken(): Promise<boolean>;
-	get isWebSocketAlive(): boolean;
-
-	get webSocketDied(): null | (() => void);
-	set webSocketDied(value: null | (() => void));
 }
 
-let token: string | null = localStorage.getItem("jwt");
+export let token: string | null = localStorage.getItem("jwt");
 
 const basePath = (path: string) => `api/${path}`;
 
-const origin = process.env.NODE_ENV && process.env.NODE_ENV === 'development' ? "https://localhost:7099" : "";
-const wsOrigin = process.env.NODE_ENV && process.env.NODE_ENV === 'development' ? "wss://localhost:7099" : `wss://${window.location.host}`;
+export const origin = process.env.NODE_ENV && process.env.NODE_ENV === 'development' ? "https://localhost:7099" : "";
 
 // TODO: Make this configurable!
 const baseAddress = (path: string) => {
 	return `${origin}/${basePath(path)}`
-}
-
-const baseWebSocketAddress = (path: string, token: string) => {
-	return `${wsOrigin}/${basePath(path)}?token=${encodeURIComponent(token)}`
 }
 
 async function opWithoutBody(method: string, path: string): Promise<any> {
@@ -111,11 +101,7 @@ function post(path: string, body?: any): Promise<any> {
 	return body === undefined ? opWithoutBody("post", path) : opWithBody("post", path, body);
 }
 
-const PingInterval = 20 * 1000; // Ping web socket server ever 20 second
-
 export class ApiImplementation implements Api {
-	private webSocketDiedHandler: null | (() => void) = null;
-	private webSocket: WebSocket | null = null;
 	private intervalHandle: number | null = null;
 
 	async getBoard(): Promise<Board> {
@@ -136,100 +122,6 @@ export class ApiImplementation implements Api {
 
 	async deleteTask(taskId: string): Promise<Board> {
 		return boardToModel(await del(`board/task/${taskId}`));
-	}
-
-	get webSocketDied() {
-		return this.webSocketDiedHandler;
-	}
-
-	set webSocketDied(value: null | (() => void)) {
-		this.webSocketDiedHandler = value;
-		if (this.webSocket) {
-			this.webSocket.onerror = () => {
-				if (this.webSocketDiedHandler)
-					this.webSocketDiedHandler();
-			}
-
-			this.webSocket.onclose = () => {
-				if (this.webSocketDiedHandler)
-					this.webSocketDiedHandler();
-			}
-		}
-	}
-
-	async connectWebSocket(callback: (message: WebSocketMessage) => Promise<void>): Promise<void> {
-		if (!token)
-			throw new Error("No authentication performed. Quitting.");
-
-		if (this.webSocket && this.webSocket.readyState === WebSocket.OPEN)
-			return;
-
-		const tokenAtCallTime = token;
-		return new Promise((resolve, reject) => {
-			try {
-				this.webSocket = new WebSocket(baseWebSocketAddress("web-socket", tokenAtCallTime));
-				this.webSocket.onopen = () => {
-					resolve();
-					this.intervalHandle = window.setInterval(() => {
-						this.pingWebSocket();
-					}, PingInterval);
-				}
-				this.webSocket.onmessage = (evt: MessageEvent) => {
-					const obj = JSON.parse(evt.data);
-
-					if ("type" in obj) {
-						switch(obj.type) {
-							case "board":
-								callback({
-									type: "board",
-									board: boardToModel(obj.payload)
-								})
-								break;
-							case "pong":
-								// We sent a ping earlier, server responded with pong!
-								break;
-						}
-					} else {
-						console.error("Unknown WS message received");
-					}
-				}
-
-				this.webSocket.onerror = () => {
-					if (this.intervalHandle !== null) {
-						window.clearInterval(this.intervalHandle);
-						this.intervalHandle = null;
-					}
-
-					if (this.webSocketDiedHandler)
-						this.webSocketDiedHandler();
-				}
-
-				this.webSocket.onclose = () => {
-					if (this.intervalHandle !== null) {
-						window.clearInterval(this.intervalHandle);
-						this.intervalHandle = null;
-					}
-
-					if (this.webSocketDiedHandler)
-						this.webSocketDiedHandler();
-				}
-			} catch (error) {
-				console.error(error);
-				reject(error);
-			}
-		})
-	}
-
-	private pingWebSocket(): void {
-		if (!token)
-			throw new Error("No authentication performed. Quitting.");
-
-		if (!this.webSocket || this.webSocket.readyState !== WebSocket.OPEN)
-			throw new Error("Web socket is not connected.");
-		
-		this.webSocket.send(JSON.stringify({
-			type: "ping"
-		}));
 	}
 
 	async checkAuth(): Promise<boolean> {
@@ -316,10 +208,6 @@ export class ApiImplementation implements Api {
 			return false;
 
 		throw new Error("Failed to renew token.");
-	}
-
-	get isWebSocketAlive(): boolean {
-		return this.webSocket?.readyState === 1;
 	}
 }
 
@@ -499,10 +387,3 @@ function scheduleToDto(model: Schedule): ScheduleDto {
 function parseDate(start: string): Date {
 	return moment(start).toDate();
 }
-
-export interface BoardUpdate {
-	type: "board",
-	board: Board
-}
-
-export type WebSocketMessage = BoardUpdate;

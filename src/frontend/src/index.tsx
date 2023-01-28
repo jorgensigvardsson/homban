@@ -4,15 +4,19 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { ApiContext, ApiImplementation, WebSocketMessage } from './api';
+import { ApiContext, ApiImplementation, origin, token } from './api';
 import Login from './Login';
 import { State, Event, StateMachine } from './app-state';
 import { delay } from './delay';
 import { Board } from './models/board';
+import * as signalR from "@microsoft/signalr";
 
 const root = ReactDOM.createRoot(
 	document.getElementById('root') as HTMLElement
 );
+
+let signalRConnection: signalR.HubConnection | null = null;
+
 
 let tokenRenewalTimerId: number | null = null;
 const ONE_HOUR_INTERVAL = 1000 /* ms -> s */ * 60 /* s -> min */ * 60 /* min -> h */;
@@ -33,14 +37,20 @@ stateMachine.addTransition(State.Connecting, Event.Connected, State.FetchingBoar
 stateMachine.addTransition(State.FetchingBoard, Event.BoardFetched, State.Running, () => boardFetched());
 stateMachine.addTransition(State.Connecting, Event.Check, State.Checking, () => check());
 stateMachine.addTransition(State.WantCredentials, Event.Connect, State.Connecting, () => connect());
-stateMachine.addTransition(State.Running, Event.Reconnect, State.Checking, () => check());
-stateMachine.addTransition(State.FetchingBoard, Event.Reconnect, State.Checking, () => check());
+stateMachine.addTransition(State.Running, Event.Reconnect, State.Checking, () => reconnect());
+stateMachine.addTransition(State.FetchingBoard, Event.Reconnect, State.Checking, () => reconnect());
 
 stateMachine.stateChangedObserver = (oldState, newState) => {
 	render(`${oldState} -> ${newState}`);
 }
 
 stateMachine.execute(Event.Check); // Kick it off!
+
+async function reconnect(): Promise<void> {
+	stopSignalR();
+
+	await check();
+}
 
 async function check(): Promise<void> {
 	if (tokenRenewalTimerId !== null)
@@ -67,12 +77,23 @@ async function check(): Promise<void> {
 
 async function connect(): Promise<void> {
 	try {
-		await api.connectWebSocket(async (message: WebSocketMessage) => {
-			if (message.type === "board") {
-				board = message.board;
-				render("Board received on web socket");
+		const hubOptions: signalR.IHttpConnectionOptions = {
+			headers: {
+				Authorization: `Bearer ${token}`
 			}
-		});
+		};
+		
+		
+		signalRConnection = new signalR.HubConnectionBuilder()
+			.withUrl(origin + "/board-hub", hubOptions)
+			.withAutomaticReconnect()
+			.build();
+
+		signalRConnection.on("BoardUpdated", newBoard => {
+			board = newBoard;
+			render("Board received on SignalR hub");
+		})
+		await signalRConnection.start();
 		stateMachine.execute(Event.Connected);
 	} catch (err) {
 		console.error("Failed to connect web socket", err);
@@ -101,6 +122,14 @@ function renderStatusText(text: string) {
 	return <div className="status-text"><h1>{text}</h1></div>;
 }
 
+function stopSignalR() {
+	if (signalRConnection &&
+		(signalRConnection.state === signalR.HubConnectionState.Connected ||
+		 signalRConnection.state === signalR.HubConnectionState.Connecting ||
+		 signalRConnection.state === signalR.HubConnectionState.Reconnecting))
+		signalRConnection.stop();
+}
+
 
 function render(cause: string) {
 	let domNode: React.ReactNode;
@@ -119,6 +148,7 @@ function render(cause: string) {
 			domNode = renderStatusText("Loading board...");
 			break;
 		case State.WantCredentials:
+			stopSignalR();
 			domNode = (
 				// <React.StrictMode>
 					<ApiContext.Provider value={api}>
@@ -164,14 +194,9 @@ if ('onresume' in document) {
 } else {
 	document.addEventListener('visibilitychange', e => {
 		if (document.visibilityState === 'visible') {
-			if (!api.isWebSocketAlive)
-				stateMachine.execute(Event.Reconnect);
+			stateMachine.execute(Event.Reconnect);
 		}
 	})
-}
-
-api.webSocketDied = () => {
-	stateMachine.execute(Event.Reconnect);
 }
 
 // If you want to start measuring performance in your app, pass a function

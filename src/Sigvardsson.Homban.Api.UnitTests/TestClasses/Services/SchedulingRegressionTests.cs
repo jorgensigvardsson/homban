@@ -1,7 +1,6 @@
 using System;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Sigvardsson.Homban.Api.Services;
 using Sigvardsson.Homban.Api.UnitTests.Infrastructure;
 using Xunit;
@@ -24,7 +23,7 @@ public class SchedulingRegressionTests : TestBase
         m_fakeCpuControl = new FakeCpuControl();
         m_inactiveTaskScheduler = new InactiveTaskScheduler();
         m_backingStoreService = new InMemoryBackingStoreService("ensure-move-inactive-off-board-backing-store.json", new ConfigurableJsonSerializer<StorageJsonSettings>(new StorageJsonSettings(), Encoding.UTF8), new TestLogger<BackingStoreService>(outputHelper));
-        m_boardService = new BoardService(new TestLogger<BoardService>(outputHelper), m_backingStoreService, new GuidGenerator(), m_fakeCpuControl);
+        m_boardService = new BoardService(new TestLogger<BoardService>(outputHelper), m_backingStoreService, new GuidGenerator(), m_fakeCpuControl, new FakeBoardHubService());
         m_boardScheduler = new BoardScheduler(m_boardService, new TestLogger<BoardScheduler>(outputHelper), m_inactiveTaskScheduler, m_fakeCpuControl, m_fakeCpuControl);
     }
 
