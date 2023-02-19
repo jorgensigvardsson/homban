@@ -26,7 +26,7 @@ public static class Program
 
         var apiJsonSettings = new ApiJsonSettings();
         var utf8Encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
-        builder.Services.AddSignalR(options => options.EnableDetailedErrors = true);
+        builder.Services.AddSignalR(options => options.EnableDetailedErrors = true).AddNewtonsoftJsonProtocol();
         builder.Services.AddSingleton<IBoardService, BoardService>();
         builder.Services.AddSingleton<IBackingStoreService, BackingStoreService>();
         builder.Services.AddSingleton<IConfigurableJsonSerializer<ApiJsonSettings>>(new ConfigurableJsonSerializer<ApiJsonSettings>(apiJsonSettings, utf8Encoding));
@@ -37,7 +37,7 @@ public static class Program
         builder.Services.AddSingleton<IThreadControl, ThreadControl>();
         builder.Services.AddSingleton<IClock, Clock>();
         builder.Services.AddSingleton<IGuidGenerator, GuidGenerator>();
-        builder.Services.AddSingleton<IBoardHubService, BoardHubService>();
+        builder.Services.AddSingleton<IHostedService, BoardHubService>();
         builder.Services
                .AddControllers()
                .AddNewtonsoftJson(o =>
@@ -122,10 +122,11 @@ public static class Program
             app.UseSwaggerUI();
         }
 
+        app.UseMiddleware<BoardHubMiddleware>();
         app.UseAuthorization();
         app.UseAuthentication();
         app.MapControllers();
-        app.MapHub<BoardHub>("/board-hub");
+        app.MapHub<BoardHub>("/api/board-hub");
         app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30)});
         app.UseSerilogRequestLogging();
 

@@ -3,10 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using Sigvardsson.Homban.Api.Controllers;
-using Sigvardsson.Homban.Api.Hubs;
 
 namespace Sigvardsson.Homban.Api.Services;
 
@@ -34,7 +31,6 @@ public class BoardService : IBoardService, IDisposable
     private readonly IBackingStoreService m_backingStoreService;
     private readonly IGuidGenerator m_guidGenerator;
     private readonly IClock m_clock;
-    private readonly IBoardHubService m_boardHubService;
     private readonly Mutex m_mutex = new ();
     private Board? m_board;
     private readonly ConcurrentBag<BoardServiceObserverRegistration> m_observerRegistrations = new();
@@ -42,14 +38,12 @@ public class BoardService : IBoardService, IDisposable
     public BoardService(ILogger<BoardService> logger,
                         IBackingStoreService backingStoreService,
                         IGuidGenerator guidGenerator,
-                        IClock clock,
-                        IBoardHubService boardHubService)
+                        IClock clock)
     {
         m_logger = logger ?? throw new ArgumentNullException(nameof(logger));
         m_backingStoreService = backingStoreService ?? throw new ArgumentNullException(nameof(backingStoreService));
         m_guidGenerator = guidGenerator ?? throw new ArgumentNullException(nameof(guidGenerator));
         m_clock = clock ?? throw new ArgumentNullException(nameof(clock));
-        m_boardHubService = boardHubService ?? throw new ArgumentNullException(nameof(boardHubService));
     }
 
     public void Dispose()
@@ -89,7 +83,7 @@ public class BoardService : IBoardService, IDisposable
             await m_backingStoreService.Set(boardAndTask.Board, cancellationToken);
             SetBoard(boardAndTask.Board);
             m_logger.LogInformation("Firing observers.");
-            await m_boardHubService.SendBoardUpdates(boardAndTask.Board, cancellationToken);
+            await NotifyObservers(boardAndTask.Board);
             return boardAndTask;
         }, cancellationToken);
     }
@@ -112,9 +106,8 @@ public class BoardService : IBoardService, IDisposable
             m_logger.LogInformation("Change detected, updating backing store with new board.");
             await m_backingStoreService.Set(newBoard, cancellationToken);
             SetBoard(newBoard);
-            
             m_logger.LogInformation("Firing observers.");
-            await m_boardHubService.SendBoardUpdates(newBoard, cancellationToken);
+            await NotifyObservers(newBoard);
             return newBoard;
         }, cancellationToken);
     }
@@ -310,6 +303,15 @@ public class BoardService : IBoardService, IDisposable
     private void UnregisterObserver(BoardServiceObserverRegistration observer)
     {
         m_observerRegistrations.TryTake(out _);
+    }
+
+    private async System.Threading.Tasks.Task NotifyObservers(Board board)
+    {
+        var observers = m_observerRegistrations.ToImmutableArray();
+        foreach (var observer in observers)
+        {
+            await observer.Observer(board);
+        }
     }
 }
 
