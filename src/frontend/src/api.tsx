@@ -283,6 +283,10 @@ interface OneTimeScheduleDto {
 
 type ScheduleDto = PeriodicScheduleFollowingCalendarDto | PeriodicScheduleFollowingActivityDto | OneTimeScheduleDto;
 
+export function parse(dto: BoardDto): Board {
+	return boardToModel(dto);
+}
+
 function boardToModel(dto: BoardDto): Board {
 	const modelTasks: TaskDictionary = {};
 

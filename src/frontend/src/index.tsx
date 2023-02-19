@@ -4,7 +4,7 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { ApiContext, ApiImplementation, origin, token } from './api';
+import { ApiContext, ApiImplementation, origin, parse, token } from './api';
 import Login from './Login';
 import { State, Event, StateMachine } from './app-state';
 import { delay } from './delay';
@@ -78,6 +78,7 @@ async function check(): Promise<void> {
 async function connect(): Promise<void> {
 	try {
 		const hubOptions: signalR.IHttpConnectionOptions = {
+			accessTokenFactory: () => token ?? "",
 			headers: {
 				Authorization: `Bearer ${token}`
 			}
@@ -85,12 +86,12 @@ async function connect(): Promise<void> {
 		
 		
 		signalRConnection = new signalR.HubConnectionBuilder()
-			.withUrl(origin + "/board-hub", hubOptions)
+			.withUrl(origin + "/api/board-hub", hubOptions)
 			.withAutomaticReconnect()
 			.build();
 
 		signalRConnection.on("BoardUpdated", newBoard => {
-			board = newBoard;
+			board = parse(newBoard);
 			render("Board received on SignalR hub");
 		})
 		await signalRConnection.start();

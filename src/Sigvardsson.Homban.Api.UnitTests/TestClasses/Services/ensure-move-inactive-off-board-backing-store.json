@@ -31,13 +31,13 @@
       "description": "Och bör ut återvinningen samtidigt!",
       "schedule": {
         "$type": "Sigvardsson.Homban.Api.Services.PeriodicScheduleFollowingActivityStorageObject, Sigvardsson.Homban.Api",
-        "start": "2023-01-09T00:00:00+00:00",
+        "start": "2023-02-21T00:00:00+00:00",
         "period": "2w"
       },
       "created": "2023-01-02T06:42:43.1445518+00:00",
-      "lastChange": "2023-01-11T00:00:00.0169011+00:00",
-      "lastMovedOnToBoardTime": "2023-01-09T07:39:44.1301933+00:00",
-      "lastMovedOffTheBoardTime": "2023-01-11T00:00:00.0169018+00:00"
+      "lastChange": "2023-02-15T07:55:00.2621655+00:00",
+      "lastMovedOnToBoardTime": "2023-02-08T00:00:00.0001554+00:00",
+      "lastMovedOffTheBoardTime": "2023-02-09T00:00:00.0288579+00:00"
     },
     "371dd78b-02ca-4580-9285-c25473451abc": {
       "title": "Dammtorka övervåningen",
@@ -61,9 +61,9 @@
         "period": "2w"
       },
       "created": "2022-12-30T16:22:26.7256311+00:00",
-      "lastChange": "2023-01-22T12:18:48.4025555+00:00",
-      "lastMovedOnToBoardTime": "2023-01-22T00:00:00.0056191+00:00",
-      "lastMovedOffTheBoardTime": "2023-01-22T00:00:00.0056191+00:00"
+      "lastChange": "2023-02-09T00:00:00.0335309+00:00",
+      "lastMovedOnToBoardTime": "2023-02-06T00:00:00.0087055+00:00",
+      "lastMovedOffTheBoardTime": "2023-02-09T00:00:00.0335314+00:00"
     },
     "7a9b5f6d-0998-4061-b840-629a56ae4f04": {
       "title": "Putsa fönster",
@@ -87,9 +87,9 @@
         "period": "1w"
       },
       "created": "2022-12-30T16:10:15.7128469+00:00",
-      "lastChange": "2023-01-19T00:00:00.0034213+00:00",
-      "lastMovedOnToBoardTime": "2023-01-18T00:00:00.0092182+00:00",
-      "lastMovedOffTheBoardTime": "2023-01-19T00:00:00.0034215+00:00"
+      "lastChange": "2023-02-18T16:02:42.873512+00:00",
+      "lastMovedOnToBoardTime": "2023-02-13T00:00:00.0009133+00:00",
+      "lastMovedOffTheBoardTime": "2023-02-13T00:00:00.0009133+00:00"
     },
     "bd829ebc-673f-4d52-bc5e-678710e400cf": {
       "title": "Byt disktrasa",
@@ -100,9 +100,9 @@
         "period": "3d"
       },
       "created": "2022-12-30T15:59:09.8695347+00:00",
-      "lastChange": "2023-01-22T12:19:28.4588534+00:00",
-      "lastMovedOnToBoardTime": "2023-01-19T00:00:00.0021293+00:00",
-      "lastMovedOffTheBoardTime": "2023-01-19T00:00:00.0021293+00:00"
+      "lastChange": "2023-02-19T07:34:06.5998779+00:00",
+      "lastMovedOnToBoardTime": "2023-02-19T07:34:06.5998783+00:00",
+      "lastMovedOffTheBoardTime": "2023-02-09T00:00:00.0011559+00:00"
     },
     "865ab943-4e25-4d2a-8cec-5dfe1c52108b": {
       "title": "Städa badrummen",
@@ -113,9 +113,9 @@
         "period": "1w"
       },
       "created": "2022-12-30T16:21:34.3962802+00:00",
-      "lastChange": "2023-01-22T12:19:25.4620891+00:00",
-      "lastMovedOnToBoardTime": "2023-01-21T00:00:00.0001764+00:00",
-      "lastMovedOffTheBoardTime": "2023-01-21T00:00:00.0001764+00:00"
+      "lastChange": "2023-02-13T00:00:00.015312+00:00",
+      "lastMovedOnToBoardTime": "2023-02-09T00:00:00.0149375+00:00",
+      "lastMovedOffTheBoardTime": "2023-02-13T00:00:00.0153125+00:00"
     },
     "02ea8d7f-d9e0-46bf-b3cc-276e7e0921e5": {
       "title": "Rensa hängrännor",
@@ -139,9 +139,9 @@
         "period": "4w"
       },
       "created": "2022-12-30T16:04:37.552726+00:00",
-      "lastChange": "2023-01-16T16:42:25.0366535+00:00",
-      "lastMovedOnToBoardTime": "2023-01-15T00:00:00.008878+00:00",
-      "lastMovedOffTheBoardTime": "2023-01-16T16:42:25.0366541+00:00"
+      "lastChange": "2023-02-13T00:00:00.0118753+00:00",
+      "lastMovedOnToBoardTime": "2023-02-13T00:00:00.011876+00:00",
+      "lastMovedOffTheBoardTime": "2023-01-15T00:00:00.008878+00:00"
     },
     "f58f4622-6105-474d-8b7f-9dda9b604b86": {
       "title": "Panta!",
@@ -174,13 +174,13 @@
       "description": "på 25 minuter ska vi \n* Leta igenom huset och samla ihop alla våra saker och lägga dem på rätt plats\n* Plocka upp alla grejer från golvet! \n* Dammsuga våra rum\n* Mamma och pappa rensar på vedspisen!",
       "schedule": {
         "$type": "Sigvardsson.Homban.Api.Services.PeriodicScheduleFollowingActivityStorageObject, Sigvardsson.Homban.Api",
-        "start": "2023-01-05T00:00:00+00:00",
+        "start": "2023-01-26T00:00:00+00:00",
         "period": "1w"
       },
       "created": "2022-12-30T18:08:13.1076912+00:00",
-      "lastChange": "2023-01-22T12:19:00.6244232+00:00",
-      "lastMovedOnToBoardTime": "2023-01-19T00:00:00.0000765+00:00",
-      "lastMovedOffTheBoardTime": "2023-01-19T00:00:00.0000765+00:00"
+      "lastChange": "2023-02-18T15:22:30.0702882+00:00",
+      "lastMovedOnToBoardTime": "2023-02-09T00:00:00.0085155+00:00",
+      "lastMovedOffTheBoardTime": "2023-02-09T00:00:00.0085155+00:00"
     },
     "b12729e7-2e94-467f-beb2-94cd92d55330": {
       "title": "Byt handdukarna",
@@ -191,9 +191,9 @@
         "period": "1w"
       },
       "created": "2022-12-30T16:00:53.1866421+00:00",
-      "lastChange": "2023-01-19T00:00:00.0056219+00:00",
-      "lastMovedOnToBoardTime": "2023-01-18T00:00:00.0050888+00:00",
-      "lastMovedOffTheBoardTime": "2023-01-19T00:00:00.0056221+00:00"
+      "lastChange": "2023-02-18T15:09:56.2289721+00:00",
+      "lastMovedOnToBoardTime": "2023-02-13T00:00:00.0049475+00:00",
+      "lastMovedOffTheBoardTime": "2023-02-13T00:00:00.0049475+00:00"
     },
     "5552e8c6-73d3-4651-be85-1f17f15d7b08": {
       "title": "Frosta av frysen",
@@ -230,9 +230,9 @@
         "period": "10d"
       },
       "created": "2022-12-30T16:01:52.5831171+00:00",
-      "lastChange": "2023-01-22T07:38:18.9556061+00:00",
-      "lastMovedOnToBoardTime": "2023-01-18T00:00:00.0001589+00:00",
-      "lastMovedOffTheBoardTime": "2023-01-10T00:00:00.0062551+00:00"
+      "lastChange": "2023-02-18T15:08:02.8992399+00:00",
+      "lastMovedOnToBoardTime": "2023-02-09T00:00:00.0206151+00:00",
+      "lastMovedOffTheBoardTime": "2023-02-09T00:00:00.0206151+00:00"
     },
     "d3e6186f-71b9-49c0-852e-f43a4c3307b6": {
       "title": "Rengör micron",
@@ -256,9 +256,9 @@
         "period": "1d"
       },
       "created": "2022-12-30T17:12:44.6067068+00:00",
-      "lastChange": "2023-01-09T00:00:00.0090931+00:00",
-      "lastMovedOnToBoardTime": "2023-01-09T00:00:00.0090938+00:00",
-      "lastMovedOffTheBoardTime": "2023-01-04T00:00:00.0089666+00:00"
+      "lastChange": "2023-02-18T15:23:41.538014+00:00",
+      "lastMovedOnToBoardTime": "2023-02-18T15:23:08.7278068+00:00",
+      "lastMovedOffTheBoardTime": "2023-02-18T15:23:08.7278068+00:00"
     },
     "92fb09ed-457f-4146-b98d-002fdce6b7e3": {
       "title": "Byt sängkläder i alla sängar",
@@ -269,9 +269,9 @@
         "period": "3w"
       },
       "created": "2022-12-30T16:02:21.1546841+00:00",
-      "lastChange": "2023-01-22T07:37:54.7901246+00:00",
-      "lastMovedOnToBoardTime": "2023-01-22T00:00:00.0017443+00:00",
-      "lastMovedOffTheBoardTime": "2023-01-22T00:00:00.0017443+00:00"
+      "lastChange": "2023-02-18T16:02:41.1414251+00:00",
+      "lastMovedOnToBoardTime": "2023-02-13T00:00:00.0084575+00:00",
+      "lastMovedOffTheBoardTime": "2023-02-13T00:00:00.0084575+00:00"
     },
     "8b52a0bc-c9a3-41e0-a76e-a535704906da": {
       "title": "Dammtorka i källaren",
@@ -321,9 +321,9 @@
         "period": "6mo"
       },
       "created": "2023-01-15T15:39:23.7938403+00:00",
-      "lastChange": "2023-01-15T15:48:48.2547963+00:00",
-      "lastMovedOnToBoardTime": "2023-01-15T15:39:23.7938431+00:00",
-      "lastMovedOffTheBoardTime": "2023-01-15T15:48:48.2547975+00:00"
+      "lastChange": "2023-02-14T00:00:00.0001324+00:00",
+      "lastMovedOnToBoardTime": "2023-02-14T00:00:00.0001328+00:00",
+      "lastMovedOffTheBoardTime": "2023-01-15T15:39:23.7938431+00:00"
     },
     "f4c0a4df-638c-437e-9982-84b68c2ad647": {
       "title": "Torka av köksfläkten",
@@ -347,9 +347,9 @@
         "period": "3w"
       },
       "created": "2022-12-30T16:40:13.3435852+00:00",
-      "lastChange": "2023-01-08T09:27:08.9608836+00:00",
-      "lastMovedOnToBoardTime": "2023-01-05T07:16:16.8566023+00:00",
-      "lastMovedOffTheBoardTime": "2023-01-08T09:27:08.960884+00:00"
+      "lastChange": "2023-02-18T16:02:47.4732623+00:00",
+      "lastMovedOnToBoardTime": "2023-01-29T00:00:00.0071186+00:00",
+      "lastMovedOffTheBoardTime": "2023-01-29T00:00:00.0071186+00:00"
     },
     "c2d31418-f9d1-4a55-975e-2f39cfde4edd": {
       "title": "Plocka ner belysningen ur utegranen",
@@ -365,30 +365,30 @@
     }
   },
   "readyLaneTasks": [
-    "1839a129-6b98-45e2-a7f9-a354ef98ae1c",
-    "00323e5f-7a77-4eba-a8c5-cec71580a797"
+    "3d65d70c-1064-41ea-9504-4381bf6f0ec6",
+    "ef59de83-8209-45a0-8509-a95b2f373013",
+    "bd829ebc-673f-4d52-bc5e-678710e400cf"
   ],
   "inProgressLaneTasks": [],
   "doneLaneTasks": [
-    "bd829ebc-673f-4d52-bc5e-678710e400cf",
-    "865ab943-4e25-4d2a-8cec-5dfe1c52108b",
-    "dea68f52-14ad-40e9-b789-dc87ec172182",
+    "32543932-9f14-4938-bc15-ae815f41c353",
+    "1839a129-6b98-45e2-a7f9-a354ef98ae1c",
+    "cceb51c7-a1af-4466-9be2-fe9f467db140",
+    "92fb09ed-457f-4146-b98d-002fdce6b7e3",
+    "b12729e7-2e94-467f-beb2-94cd92d55330",
     "e3374e6f-e146-4760-8056-a10fb6d5cc50",
-    "92fb09ed-457f-4146-b98d-002fdce6b7e3"
+    "00323e5f-7a77-4eba-a8c5-cec71580a797"
   ],
   "inactiveLaneTasks": [
+    "865ab943-4e25-4d2a-8cec-5dfe1c52108b",
+    "dea68f52-14ad-40e9-b789-dc87ec172182",
+    "4bf3889f-b974-40af-a3c8-97eae1f77375",
     "5552e8c6-73d3-4651-be85-1f17f15d7b08",
-    "b12729e7-2e94-467f-beb2-94cd92d55330",
-    "32543932-9f14-4938-bc15-ae815f41c353",
     "371dd78b-02ca-4580-9285-c25473451abc",
     "8b52a0bc-c9a3-41e0-a76e-a535704906da",
-    "ef59de83-8209-45a0-8509-a95b2f373013",
-    "3d65d70c-1064-41ea-9504-4381bf6f0ec6",
     "d3e6186f-71b9-49c0-852e-f43a4c3307b6",
     "c2d31418-f9d1-4a55-975e-2f39cfde4edd",
-    "4bf3889f-b974-40af-a3c8-97eae1f77375",
     "77cab5db-4183-4c77-94d9-ae77801a82dc",
-    "cceb51c7-a1af-4466-9be2-fe9f467db140",
     "f58f4622-6105-474d-8b7f-9dda9b604b86",
     "288a97e5-8e1c-43b9-bb98-bdbf66259626",
     "7a9b5f6d-0998-4061-b840-629a56ae4f04",
