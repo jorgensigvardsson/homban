@@ -7,7 +7,6 @@
 }
 
 .BoardContainer {
-	background-image: url("../static/backdrop.jpg");
 	background-repeat: no-repeat;
 	background-attachment: scroll;
 	background-color: transparent;

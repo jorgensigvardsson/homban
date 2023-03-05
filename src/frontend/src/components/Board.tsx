@@ -2,6 +2,8 @@ import { Board as BoardModel, Lane, Task } from '../models/board';
 import './Board.css';
 import { BoardLane } from './BoardLane';
 import { DragDropContext, Droppable, DropResult, ResponderProvided } from 'react-beautiful-dnd';
+import { useEffect } from 'react';
+import { origin } from '../api';
 
 interface Props {
 	board: BoardModel,
@@ -19,6 +21,10 @@ const VIB_FREQ = 25;
 
 export const Board = (props: Props) => {
 	const { board, onTaskDrop } = props;
+
+	const backdropStyle = {
+		backgroundImage: `url('${origin}/api/resources/backdrop')`
+	}
 
 	const onDragStart = () => {
 		vibrate([VIB_FREQ]);
@@ -67,7 +73,7 @@ export const Board = (props: Props) => {
 	return (
 		<DragDropContext onDragEnd={(r, p) => onDragEnd(r, p)}
 		                 onDragStart={(s, p) => onDragStart()}>
-			<div className="BoardContainer">
+			<div className="BoardContainer" style={{...backdropStyle}}>
 				<div className="BoardTitle">
 					<div className="LaneTitle">Ready</div>
 					<div className="LaneTitle">In Progress</div>
